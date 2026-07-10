@@ -19,6 +19,9 @@ import fun.popka.api.storages.implement.helpertstorages.enumvar.ModuleClass;
 import fun.popka.api.utils.baritone.BaritoneAntiStuck;
 import fun.popka.api.utils.player.Counter;
 import fun.popka.visuals.modules.impl.render.ShaderEsp;
+import fun.popka.visuals.ui.mainmenu.PopkaTitleScreen;
+import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.gui.screen.TitleScreen;
 
 import java.lang.reflect.InvocationTargetException;
 
@@ -74,6 +77,14 @@ public abstract class MinecraftClientMixin {
         if (shaderEsp != null && shaderEsp.shouldOutline(entity)) {
             cir.setReturnValue(true);
             return;
+        }
+    }
+
+    @Inject(method = "setScreen", at = @At("HEAD"), cancellable = true)
+    private void Popka$setScreen(Screen screen, CallbackInfo ci) {
+        if (screen instanceof TitleScreen && !(screen instanceof PopkaTitleScreen)) {
+            ci.cancel();
+            ((MinecraftClient) (Object) this).setScreen(new PopkaTitleScreen());
         }
     }
 }
