@@ -25,11 +25,11 @@ public class DiscordManager implements QClient {
 
     private void cppInit() {
         discordDaemonThread = new DiscordDaemonThread();
-        APPLICATION_ID = 1480864732553547786L;
+        APPLICATION_ID = 1525126857111113738L;
         running = true;
-        image = "https://raw.githubusercontent.com/dezolator1/discordrpc/main/Comp-1_42_30fps.gif";
+        image = "https://github.com/operkassey13251/discordrpcrival/blob/main/main/logopopki.gif?raw=true";
         site = "https://Popkavisuals.ru/";
-        telegram = "https://t.me/popkavisuals";
+        telegram = "https://t.me/popkavisual";
     }
 
     String state = "";
