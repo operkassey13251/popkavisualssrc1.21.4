@@ -73,66 +73,38 @@ public class WaterMark extends InterfaceProcessing {
         var matrices = eventRender.getContext().getMatrices();
         float x = draggable.getX();
         float y = draggable.getY();
-        var logoFont = Fonts.getFont("logo", 17);
         var iconNew14 = Fonts.getFont("iconnew", 14);
-        var iconNew15 = Fonts.getFont("iconnew", 15);
         var icon14 = Fonts.getFont("icon", 14);
         var statsIconFont = Fonts.getFont("popka", 14);
         if (statsIconFont == null) statsIconFont = iconNew14 != null ? iconNew14 : icon14;
         var suisse13 = Fonts.getFont("suisse", 13);
 
-        float PopkaRectH = 16;
-        int iconSize = 17;
-        String iconGlyph = "A";
-        float iconW = logoFont.getStringWidth(iconGlyph);
-        float iconX = x + (17 - iconW) / 2;
-        float iconY = y + 5.5f;
-        int iconTop;
+        int themeColor;
         if (!Popka.INSTANCE.themeStorage.getThemes().getTheme().getName().equals("Rainbow")) {
-            iconTop = Popka.INSTANCE.themeStorage.getThemes().getTheme().color[0];
+            themeColor = Popka.INSTANCE.themeStorage.getThemes().getTheme().color[0];
         } else {
-            iconTop = ColorUtils.getThemeColor();
+            themeColor = ColorUtils.getThemeColor();
         }
-        boolean drawSquares = isUnusualRectType();
-        float rect2Pad = 3;
-        String username = getUsername();
-        String UID = getUID();
+
         int whiteColor = new Color(255, 255, 255, 255).getRGB();
-        float textY = y + 6.8f;
+        int grayColor = ColorUtils.rgba(170, 170, 170, 255);
 
-        String brandText = "";
-        float brandTextX = iconX + iconW + 2.5f;
-        float brandTextW = suisse13.getStringWidth(brandText);
+        float panelH = 18f;
+        float pad = 4f;
 
-        float PopkaRectX = x;
-        float PopkaRectY = y;
-        float PopkaRectW = brandTextX + brandTextW + 1.5f - x;
-
-        RenderUtils.drawDefaultHudThemedPanel(matrices, PopkaRectX, PopkaRectY, PopkaRectW, PopkaRectH, 2.8f, 3.3f, iconTop);
-        if (drawSquares) {
+        String username = "";
+        if (mc != null && mc.player != null) {
+            username = mc.player.getName().getString();
         }
+        if (username.isEmpty()) username = getUsername();
 
-        int logoShadow = ColorUtils.applyAlpha(iconTop, 0.32f);
-        RenderUtils.drawShadow(matrices, iconX + 0.3f, iconY - 1.25f, iconW - 1, iconSize - 11, 3, 5f, logoShadow);
-        logoFont.drawGradientStringHorizontal(matrices, iconGlyph, iconX - 0.25f, iconY, iconTop, iconTop);
-        suisse13.drawString(matrices, brandText, brandTextX, textY, whiteColor);
-
-        float rect2X = PopkaRectX + PopkaRectW + 2.5f;
-
-        float rect2H = 15.85f;
-        int icon2Size = 14;
-        String iconGlyph2 = "e";
-        float icon2Y = y + 7.45f;
-
-        int icon3Size = 14;
-        String fpsIconGlyph = "j";
-        String pingIconGlyph = "f";
-        float icon3Y = y + 7.25f;
-
-        int fps = mc != null ? mc.getCurrentFps() : 0;
-        String fpsValue = String.valueOf(fps);
-        String fpsSuffix = "fps";
-        String fpsText = fpsValue + fpsSuffix;
+        String serverIP = "Singleplayer";
+        if (mc != null) {
+            var info = mc.getCurrentServerEntry();
+            if (info != null && info.address != null && !info.address.isEmpty()) {
+                serverIP = info.address;
+            }
+        }
 
         int ping = 0;
         if (mc != null && mc.player != null && mc.getNetworkHandler() != null) {
@@ -143,118 +115,120 @@ public class WaterMark extends InterfaceProcessing {
         String pingSuffix = "ms";
         String pingText = pingValue + pingSuffix;
 
-        float contentW = rect2Pad;
-        contentW += iconNew14.getStringWidth(iconGlyph2) + 1f;
-        if (!username.isEmpty()) {
-            contentW += suisse13.getStringWidth(username) + 2f;
-        }
-        if (showFps) {
-            contentW += statsIconFont != null ? statsIconFont.getStringWidth(fpsIconGlyph) + 2f : 0f;
-            contentW += suisse13.getStringWidth(fpsText) + 2f;
-        }
-        if (showMs) {
-            contentW += statsIconFont != null ? statsIconFont.getStringWidth(pingIconGlyph) + 2f : 0f;
-            contentW += suisse13.getStringWidth(pingText) + 2f;
-        }
-        contentW += rect2Pad;
+        int fps = mc != null ? mc.getCurrentFps() : 0;
+        String fpsValue = String.valueOf(fps);
+        String fpsSuffix = "fps";
+        String fpsText = fpsValue + fpsSuffix;
 
-        float rect2W = contentW - 1.05f;
-        RenderUtils.drawDefaultHudThemedPanel(matrices, rect2X, PopkaRectY, rect2W, rect2H, 2.8f, 3.3f, iconTop);
-        if (drawSquares) {
-            RenderUtils.drawHudSquarePattern(matrices, rect2X, PopkaRectY, rect2W, rect2H, iconTop);
-        }
-
-        float drawX = rect2X + rect2Pad + 1.5f;
-
-        iconNew14.drawGradientStringHorizontal(matrices, iconGlyph2, drawX - 1f, icon2Y, iconTop, iconTop);
-        drawX += iconNew14.getStringWidth(iconGlyph2) + 1f;
-
-        if (!username.isEmpty()) {
-            suisse13.drawString(matrices, username, drawX, textY, whiteColor);
-            drawX += suisse13.getStringWidth(username) + 2f;
-        }
-
-        if (showFps) {
-            if (statsIconFont != null) {
-                statsIconFont.drawGradientStringHorizontal(matrices, fpsIconGlyph, drawX, icon3Y, iconTop, iconTop);
-                drawX += statsIconFont.getStringWidth(fpsIconGlyph) + 2f;
-            }
-            suisse13.drawString(matrices, fpsValue, drawX, textY, whiteColor);
-            suisse13.drawString(matrices, fpsSuffix, drawX + suisse13.getStringWidth(fpsValue) - 1, textY, iconTop);
-            drawX += suisse13.getStringWidth(fpsText) + 2f;
-        }
-
-        if (showMs) {
-            if (statsIconFont != null) {
-                statsIconFont.drawGradientStringHorizontal(matrices, pingIconGlyph, drawX, icon3Y, iconTop, iconTop);
-                drawX += statsIconFont.getStringWidth(pingIconGlyph) + 2f;
-            }
-            suisse13.drawString(matrices, pingValue, drawX, textY, whiteColor);
-            suisse13.drawString(matrices, pingSuffix, drawX + suisse13.getStringWidth(pingValue) - 0.5, textY, iconTop);
-        }
-
-        String serverName = "Singleplayer";
-        if (mc != null) {
-            var info = mc.getCurrentServerEntry();
-            if (info != null && info.address != null && !info.address.isEmpty()) {
-                serverName = info.address;
-            }
-        }
-
-        boolean showBottom = showServer || showTps;
-        float rectBtmY = PopkaRectY + PopkaRectH + 2f;
-        float rectBtmH = 15.85f;
-
-        int iconSmallSize = 15;
-        float iconSmallW = iconNew15.getStringWidth(iconGlyph);
-        float iconSmallY = rectBtmY + (rectBtmH - iconSmallSize) / 2f + 6.5f;
-        float serverTextY = rectBtmY + (rectBtmH - 12f) / 2f + 4.8f;
-        String serverDisplayName = formatServerNameForDisplay(serverName);
-        float serverTextW = suisse13.getStringWidth(serverDisplayName);
-        int extraIconSize = 15;
-        String extraIconGlyph = "y";
-        float extraIconW = iconNew15.getStringWidth(extraIconGlyph);
-        float extraIconY = rectBtmY + (rectBtmH - extraIconSize) / 2f + 6.4f;
         String tpsValue = formatOneDecimal(getServerTps());
         String tpsSuffix = "tps";
         String tpsText = tpsValue + tpsSuffix;
-        float tpsTextW = suisse13.getStringWidth(tpsText);
-        float rectBtmW = 0f;
-        if (showBottom) {
-            float bottomX = x + rect2Pad + 8.5f;
-            if (showServer) {
-                bottomX += iconSmallW + 3f + serverTextW;
-            }
-            if (showTps) {
-                if (showServer) bottomX += 3f;
-                bottomX += extraIconW + 3f + tpsTextW;
-            }
-            rectBtmW = Math.max(40f, (bottomX + rect2Pad) - x);
 
-            RenderUtils.drawDefaultHudThemedPanel(matrices, x, rectBtmY, rectBtmW - 2.85f, rectBtmH, 2.8f, 3.3f, iconTop);
-            if (drawSquares) {
-                RenderUtils.drawHudSquarePattern(matrices, x, rectBtmY, rectBtmW, rectBtmH, iconTop);
-            }
+        String userIconGlyph = "e";
+        String serverIconGlyph = "n";
+        String pingIconGlyph = "f";
+        String fpsIconGlyph = "j";
+        String tpsIconGlyph = "y";
+        String glassIconGlyph = "g";
 
-            float drawBottomX = x + rect2Pad + 7;
-            if (showServer) {
-                iconNew15.drawGradientStringHorizontal(matrices, "n", drawBottomX - 6.5f, iconSmallY, iconTop, iconTop);
-                drawBottomX += iconSmallW + 3f;
-                drawServerNameWithThemeParts(matrices, serverDisplayName, drawBottomX, serverTextY, iconTop, whiteColor);
-                drawBottomX += serverTextW;
+        float iconSquareSize = 14f;
+
+        float contentW = pad;
+        contentW += iconSquareSize + pad;
+
+        float leftContentW = 0f;
+        if (!username.isEmpty()) {
+            leftContentW += iconNew14.getStringWidth(userIconGlyph) + 2f;
+            leftContentW += suisse13.getStringWidth(username) + pad;
+        }
+        if (showServer) {
+            leftContentW += iconNew14.getStringWidth(serverIconGlyph) + 2f;
+            leftContentW += suisse13.getStringWidth(serverIP) + pad;
+        }
+        if (showFps) {
+            leftContentW += statsIconFont != null ? statsIconFont.getStringWidth(fpsIconGlyph) + 2f : 0f;
+            leftContentW += suisse13.getStringWidth(fpsText) + pad;
+        }
+        if (showTps) {
+            leftContentW += statsIconFont != null ? statsIconFont.getStringWidth(tpsIconGlyph) + 2f : 0f;
+            leftContentW += suisse13.getStringWidth(tpsText) + pad;
+        }
+
+        float rightContentW = 0f;
+        if (showMs) {
+            rightContentW += statsIconFont != null ? statsIconFont.getStringWidth(pingIconGlyph) + 2f : 0f;
+            rightContentW += suisse13.getStringWidth(pingText) + pad;
+        }
+
+        float gap = 4f;
+        contentW += leftContentW;
+        if (showMs && leftContentW > 0f) contentW += gap;
+        contentW += rightContentW;
+
+        float panelW = contentW;
+
+        RenderUtils.drawDefaultHudThemedPanel(matrices, x, y, panelW, panelH, 2.8f, 3.3f, themeColor);
+
+        float iconSquareX = x + pad;
+        float iconSquareY = y + (panelH - iconSquareSize) / 2f;
+        RenderUtils.drawRoundedRect(matrices, iconSquareX, iconSquareY, iconSquareSize, iconSquareSize, 2f, themeColor);
+
+        float glassIconW = iconNew14.getStringWidth(glassIconGlyph);
+        float glassIconX = iconSquareX + (iconSquareSize - glassIconW) / 2f;
+        float glassIconY = y - 8f;
+        iconNew14.drawGradientStringHorizontal(matrices, glassIconGlyph, glassIconX, glassIconY, themeColor, themeColor);
+
+        float drawX = x + pad + iconSquareSize + pad;
+        float contentY = y + (panelH - 12f) / 2f + 4.6f;
+
+        if (!username.isEmpty()) {
+            iconNew14.drawGradientStringHorizontal(matrices, userIconGlyph, drawX, contentY, grayColor, grayColor);
+            drawX += iconNew14.getStringWidth(userIconGlyph) + 2f;
+            suisse13.drawString(matrices, username, drawX, contentY, whiteColor);
+            drawX += suisse13.getStringWidth(username) + pad;
+        }
+
+        if (showServer) {
+            iconNew14.drawGradientStringHorizontal(matrices, serverIconGlyph, drawX, contentY, grayColor, grayColor);
+            drawX += iconNew14.getStringWidth(serverIconGlyph) + 2f;
+            drawServerNameWithThemeParts(matrices, serverIP, drawX, contentY, themeColor, whiteColor);
+            drawX += suisse13.getStringWidth(serverIP) + pad;
+        }
+
+        if (showFps) {
+            if (statsIconFont != null) {
+                statsIconFont.drawGradientStringHorizontal(matrices, fpsIconGlyph, drawX, contentY, grayColor, grayColor);
+                drawX += statsIconFont.getStringWidth(fpsIconGlyph) + 2f;
             }
-            if (showTps) {
-                if (showServer) drawBottomX += 3f;
-                iconNew15.drawGradientStringHorizontal(matrices, extraIconGlyph, drawBottomX - 1.5f, extraIconY, iconTop, iconTop);
-                drawBottomX += extraIconW + 3f;
-                suisse13.drawString(matrices, tpsValue, drawBottomX - 1.75f, serverTextY, whiteColor);
-                suisse13.drawString(matrices, tpsSuffix, drawBottomX + suisse13.getStringWidth(tpsValue) - 2.5f, serverTextY, iconTop);
+            suisse13.drawString(matrices, fpsValue, drawX, contentY, whiteColor);
+            suisse13.drawString(matrices, fpsSuffix, drawX + suisse13.getStringWidth(fpsValue) - 1, contentY, themeColor);
+            drawX += suisse13.getStringWidth(fpsText) + pad;
+        }
+
+        if (showTps) {
+            if (statsIconFont != null) {
+                statsIconFont.drawGradientStringHorizontal(matrices, tpsIconGlyph, drawX, contentY, grayColor, grayColor);
+                drawX += statsIconFont.getStringWidth(tpsIconGlyph) + 2f;
+            }
+            suisse13.drawString(matrices, tpsValue, drawX, contentY, whiteColor);
+            suisse13.drawString(matrices, tpsSuffix, drawX + suisse13.getStringWidth(tpsValue) - 1, contentY, themeColor);
+            drawX += suisse13.getStringWidth(tpsText) + pad;
+        }
+
+        if (showMs) {
+            float pingDrawX = x + panelW - pad;
+            float pingTextW = suisse13.getStringWidth(pingText);
+            pingDrawX -= pingTextW;
+            suisse13.drawString(matrices, pingValue, pingDrawX, contentY, whiteColor);
+            suisse13.drawString(matrices, pingSuffix, pingDrawX + suisse13.getStringWidth(pingValue) - 0.5f, contentY, themeColor);
+            if (statsIconFont != null) {
+                pingDrawX -= statsIconFont.getStringWidth(pingIconGlyph) + 2f;
+                statsIconFont.drawGradientStringHorizontal(matrices, pingIconGlyph, pingDrawX, contentY, grayColor, grayColor);
             }
         }
 
-        float totalW = Math.max(PopkaRectW + 2f + rect2W, rectBtmW);
-        draggable.setWidth(totalW);
-        draggable.setHeight(showBottom ? (PopkaRectH + 1f + rectBtmH) : PopkaRectH);
+        draggable.setWidth(panelW);
+        draggable.setHeight(panelH);
     }
 
     public void WaveStyle(EventRender.Default eventRender) {
