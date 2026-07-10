@@ -24,16 +24,20 @@ public class GifTexture {
     private static final int DISPOSAL_RESTORE_TO_BACKGROUND = 2;
     private static final int DISPOSAL_RESTORE_TO_PREVIOUS = 3;
 
+    private static final long MAX_ELAPSED_MS = 100L;
+
     private final Identifier resourceId;
     private Identifier textureId;
     private NativeImageBackedTexture texture;
+    private NativeImage frameBuffer;
     private final List<Frame> frames = new ArrayList<>();
     private boolean loaded = false;
-    private float timer = 0;
+    private long timer = 0;
     private int currentFrame = 0;
     private boolean loopForever = true;
     private int loopCount = 0;
     private int loopsDone = 0;
+    private long lastUpdateTime = 0;
 
     public GifTexture(Identifier resourceId) {
         this.resourceId = resourceId;
@@ -91,8 +95,8 @@ public class GifTexture {
             imageStream.close();
 
             if (!frames.isEmpty()) {
-                NativeImage nativeImage = createNativeImage(frames.get(0).image);
-                texture = new NativeImageBackedTexture(nativeImage);
+                frameBuffer = createNativeImage(frames.get(0).image);
+                texture = new NativeImageBackedTexture(frameBuffer);
                 texture.setFilter(true, false);
                 textureId = Identifier.of("popka", "dynamic/mainmenu_bg");
                 MinecraftClient.getInstance().getTextureManager().registerTexture(textureId, texture);
@@ -108,6 +112,13 @@ public class GifTexture {
         int width = image.getWidth();
         int height = image.getHeight();
         NativeImage nativeImage = new NativeImage(width, height, false);
+        writeFrame(image, nativeImage);
+        return nativeImage;
+    }
+
+    private static void writeFrame(BufferedImage image, NativeImage target) {
+        int width = image.getWidth();
+        int height = image.getHeight();
         for (int y = 0; y < height; y++) {
             for (int x = 0; x < width; x++) {
                 int argb = image.getRGB(x, y);
@@ -115,31 +126,37 @@ public class GifTexture {
                 int r = (argb >> 16) & 0xFF;
                 int g = (argb >> 8) & 0xFF;
                 int b = argb & 0xFF;
-                nativeImage.setColorArgb(x, y, (a << 24) | (r << 16) | (g << 8) | b);
+                target.setColorArgb(x, y, (a << 24) | (r << 16) | (g << 8) | b);
             }
         }
-        return nativeImage;
     }
 
     public void update(float delta) {
         if (!loaded || frames.isEmpty()) return;
 
-        timer += delta * 1000f;
+        long now = System.currentTimeMillis();
+        if (lastUpdateTime == 0) lastUpdateTime = now;
+        long elapsed = now - lastUpdateTime;
+        lastUpdateTime = now;
+        if (elapsed > MAX_ELAPSED_MS) elapsed = MAX_ELAPSED_MS;
+        if (elapsed < 0) elapsed = 0;
+
+        timer += elapsed;
         Frame frame = frames.get(currentFrame);
+        boolean changed = false;
         while (timer >= frame.delay) {
             timer -= frame.delay;
             currentFrame++;
             if (currentFrame >= frames.size()) {
-                if (loopForever) {
-                    currentFrame = 0;
-                } else {
-                    currentFrame = frames.size() - 1;
-                }
+                currentFrame = loopForever ? 0 : frames.size() - 1;
             }
             frame = frames.get(currentFrame);
+            changed = true;
+        }
+
+        if (changed) {
             try {
-                NativeImage image = createNativeImage(frame.image);
-                texture.setImage(image);
+                writeFrame(frame.image, frameBuffer);
                 texture.upload();
             } catch (Exception e) {
                 e.printStackTrace();
