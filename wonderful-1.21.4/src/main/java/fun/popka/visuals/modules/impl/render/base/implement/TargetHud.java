@@ -10,6 +10,8 @@ import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.client.gui.screen.ChatScreen;
 import net.minecraft.item.ItemStack;
+import net.minecraft.util.hit.EntityHitResult;
+import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.MathHelper;
 import fun.popka.Popka;
 import fun.popka.api.events.implement.EventRender;
@@ -57,6 +59,22 @@ public class TargetHud extends InterfaceProcessing {
 
     public TargetHud(Draggable draggable) {
         super(draggable);
+    }
+
+    private LivingEntity getCrosshairTargetEntity() {
+        if (mc == null || mc.crosshairTarget == null) return null;
+        if (mc.crosshairTarget.getType() == HitResult.Type.ENTITY && mc.crosshairTarget instanceof EntityHitResult entityHit) {
+            if (entityHit.getEntity() instanceof LivingEntity living && living != mc.player) {
+                return living;
+            }
+        }
+        return null;
+    }
+
+    private LivingEntity resolveTarget(boolean chatOpen, LivingEntity auraTarget, LivingEntity crosshairTarget) {
+        if (chatOpen) return mc.player;
+        if (auraTarget != null) return auraTarget;
+        return crosshairTarget;
     }
 
     private Font issue(int size) {
@@ -281,7 +299,9 @@ public class TargetHud extends InterfaceProcessing {
         Aura aura = ModuleClass.INSTANCE.aura;
         boolean chatOpen = mc.currentScreen instanceof ChatScreen;
         LivingEntity auraTarget = aura != null ? aura.getTarget() : null;
-        boolean showTargetHud = chatOpen || auraTarget != null;
+        LivingEntity crosshairTarget = getCrosshairTargetEntity();
+        LivingEntity resolved = chatOpen ? mc.player : (auraTarget != null ? auraTarget : crosshairTarget);
+        boolean showTargetHud = chatOpen || auraTarget != null || crosshairTarget != null;
 
         alphaAnimation.setSpeed(showTargetHud ? 9.0f : 5.0f);
         alphaAnimation.update(showTargetHud ? 1.0f : 0.0f);
@@ -289,10 +309,10 @@ public class TargetHud extends InterfaceProcessing {
         float renderProgress = alpha;
 
         if (showTargetHud) {
-            lastTarget = chatOpen ? mc.player : auraTarget;
+            lastTarget = resolved;
         }
 
-        LivingEntity target = showTargetHud ? (chatOpen ? mc.player : auraTarget) : lastTarget;
+        LivingEntity target = showTargetHud ? resolved : lastTarget;
         if (target == null || renderProgress <= 0.01f) {
             headParticles.clear();
             lastTargetHurtTime = 0;
@@ -547,7 +567,9 @@ public class TargetHud extends InterfaceProcessing {
         Aura aura = ModuleClass.INSTANCE.aura;
         boolean chatOpen = mc.currentScreen instanceof ChatScreen;
         LivingEntity auraTarget = aura != null ? aura.getTarget() : null;
-        boolean showTargetHud = chatOpen || auraTarget != null;
+        LivingEntity crosshairTarget = getCrosshairTargetEntity();
+        LivingEntity resolved = chatOpen ? mc.player : (auraTarget != null ? auraTarget : crosshairTarget);
+        boolean showTargetHud = chatOpen || auraTarget != null || crosshairTarget != null;
         alphaAnimation.update(showTargetHud ? 1.0f : 0.0f);
 
         if (showTargetHud && !wasVisible) {
@@ -561,7 +583,7 @@ public class TargetHud extends InterfaceProcessing {
 
         if (showTargetHud) {
             scaleAnimation.update(1.0f);
-            lastTarget = chatOpen ? mc.player : auraTarget;
+            lastTarget = resolved;
         } else {
             hideScaleAnimation.update(0.0f);
         }
@@ -574,7 +596,7 @@ public class TargetHud extends InterfaceProcessing {
         }
         float progress = scale;
 
-        LivingEntity target = showTargetHud ? (chatOpen ? mc.player : auraTarget) : lastTarget;
+        LivingEntity target = showTargetHud ? resolved : lastTarget;
         if (target == null || progress <= 0.01f) {
             draggable.setWidth(0);
             draggable.setHeight(0);
