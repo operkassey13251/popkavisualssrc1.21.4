@@ -45,7 +45,13 @@
     "ClientPlayNetworkHandlerMixin",
     "WorldRendererAccessor",
     "HeldItemRendererHmiMixin",
-    "IMinecraftClientAccessor"
+    "IMinecraftClientAccessor",
+    "ScreenBackgroundMixin",
+    "MenuButtonWidgetMixin",
+    "MenuSliderWidgetMixin",
+    "MenuTextFieldWidgetMixin",
+    "MenuEntryListWidgetMixin",
+    "SliderWidgetAccessor"
   ],
   "injectors": {
     "defaultRequire": 1

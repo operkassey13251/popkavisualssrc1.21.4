@@ -1,6 +1,5 @@
 package fun.popka.visuals.ui.mainmenu;
 
-import fun.popka.api.utils.render.RenderUtils;
 import fun.popka.api.utils.render.fonts.ttf.Fonts;
 import fun.popka.api.utils.render.fonts.ttf.MCFontRenderer;
 import net.minecraft.client.gui.DrawContext;
@@ -8,9 +7,7 @@ import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.multiplayer.MultiplayerScreen;
 import net.minecraft.client.gui.screen.option.OptionsScreen;
 import net.minecraft.client.gui.screen.world.SelectWorldScreen;
-import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.text.Text;
-import net.minecraft.util.Identifier;
 
 import java.awt.*;
 import java.util.ArrayList;
@@ -18,11 +15,7 @@ import java.util.List;
 
 public class PopkaTitleScreen extends Screen {
 
-    private static final Identifier BACKGROUND_GIF = Identifier.of("popka", "textures/gui/fon.gif");
-    private static final Text TITLE_TEXT = Text.literal("PopkaVisuals");
-
     private final List<ButtonSpec> buttonSpecs = new ArrayList<>();
-    private GifTexture backgroundTexture;
 
     private final MCFontRenderer titleFont;
 
@@ -30,7 +23,6 @@ public class PopkaTitleScreen extends Screen {
         super(Text.literal("PopkaVisuals"));
         Fonts.init();
         titleFont = Fonts.getSystemFont("Segoe UI", 42, Font.BOLD);
-        backgroundTexture = new GifTexture(BACKGROUND_GIF);
     }
 
     @Override
@@ -58,18 +50,18 @@ public class PopkaTitleScreen extends Screen {
         }
     }
 
-    private void addButton(int x, int y, int width, int height, Text text, ButtonWidget.PressAction onPress) {
+    private void addButton(int x, int y, int width, int height, Text text, net.minecraft.client.gui.widget.ButtonWidget.PressAction onPress) {
         buttonSpecs.add(new ButtonSpec(x, y, width, height, text, onPress));
     }
 
     @Override
     public void renderBackground(DrawContext context, int mouseX, int mouseY, float delta) {
-        if (backgroundTexture != null && backgroundTexture.isLoaded()) {
-            backgroundTexture.update(delta);
-            RenderUtils.drawImage(context.getMatrices(), backgroundTexture.getIdentifier(), 0, 0, this.width, this.height, 0xFFFFFFFF);
-        } else {
-            context.fill(0, 0, this.width, this.height, 0xFF000000);
-        }
+        PopkaMenuBackground.render(context, this.width, this.height, delta);
+    }
+
+    @Override
+    public boolean shouldCloseOnEsc() {
+        return false;
     }
 
     @Override
@@ -84,15 +76,6 @@ public class PopkaTitleScreen extends Screen {
         titleFont.drawStringWithShadow(title, titleX, titleY, 0xFFFFFFFF);
     }
 
-    @Override
-    public void removed() {
-        if (backgroundTexture != null) {
-            backgroundTexture.close();
-            backgroundTexture = null;
-        }
-        super.removed();
-    }
-
-    private record ButtonSpec(int x, int y, int width, int height, Text text, ButtonWidget.PressAction onPress) {
+    private record ButtonSpec(int x, int y, int width, int height, Text text, net.minecraft.client.gui.widget.ButtonWidget.PressAction onPress) {
     }
 }

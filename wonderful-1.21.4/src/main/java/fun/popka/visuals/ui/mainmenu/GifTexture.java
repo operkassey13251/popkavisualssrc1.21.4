@@ -15,6 +15,7 @@ import java.awt.image.BufferedImage;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class GifTexture {
 
@@ -25,6 +26,7 @@ public class GifTexture {
     private static final int DISPOSAL_RESTORE_TO_PREVIOUS = 3;
 
     private static final long MAX_ELAPSED_MS = 100L;
+    private static final AtomicInteger TEXTURE_COUNTER = new AtomicInteger(0);
 
     private final Identifier resourceId;
     private Identifier textureId;
@@ -62,31 +64,45 @@ public class GifTexture {
             BufferedImage prevCanvas = null;
             Graphics2D canvasG = canvas.createGraphics();
             canvasG.setComposite(AlphaComposite.Src);
+            canvasG.setColor(Color.BLACK);
+            canvasG.fillRect(0, 0, width, height);
+            canvasG.setComposite(AlphaComposite.SrcOver);
 
             for (int i = 0; i < frameCount; i++) {
                 BufferedImage rawFrame = reader.read(i);
                 GifFrameInfo info = parseFrameInfo(reader.getImageMetadata(i));
 
                 if (info.disposalMethod == DISPOSAL_RESTORE_TO_PREVIOUS && prevCanvas != null) {
+                    canvasG.setComposite(AlphaComposite.Src);
                     canvasG.drawImage(prevCanvas, 0, 0, null);
+                    canvasG.setComposite(AlphaComposite.SrcOver);
                 }
 
                 if (info.disposalMethod != DISPOSAL_RESTORE_TO_PREVIOUS) {
                     prevCanvas = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
-                    prevCanvas.createGraphics().drawImage(canvas, 0, 0, null);
+                    Graphics2D pg = prevCanvas.createGraphics();
+                    pg.setComposite(AlphaComposite.Src);
+                    pg.drawImage(canvas, 0, 0, null);
+                    pg.dispose();
                 }
 
                 canvasG.drawImage(rawFrame, info.x, info.y, null);
 
-                BufferedImage frameCopy = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
-                frameCopy.createGraphics().drawImage(canvas, 0, 0, null);
+                BufferedImage frameCopy = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+                Graphics2D fg = frameCopy.createGraphics();
+                fg.drawImage(canvas, 0, 0, null);
+                fg.dispose();
                 frames.add(new Frame(frameCopy, info.delay));
 
                 if (info.disposalMethod == DISPOSAL_RESTORE_TO_BACKGROUND) {
-                    canvasG.setColor(new Color(0, 0, 0, 0));
+                    canvasG.setComposite(AlphaComposite.Src);
+                    canvasG.setColor(Color.BLACK);
                     canvasG.fillRect(info.x, info.y, rawFrame.getWidth(), rawFrame.getHeight());
+                    canvasG.setComposite(AlphaComposite.SrcOver);
                 } else if (info.disposalMethod == DISPOSAL_RESTORE_TO_PREVIOUS) {
+                    canvasG.setComposite(AlphaComposite.Src);
                     canvasG.drawImage(prevCanvas, 0, 0, null);
+                    canvasG.setComposite(AlphaComposite.SrcOver);
                 }
             }
 
@@ -98,7 +114,7 @@ public class GifTexture {
                 frameBuffer = createNativeImage(frames.get(0).image);
                 texture = new NativeImageBackedTexture(frameBuffer);
                 texture.setFilter(true, false);
-                textureId = Identifier.of("popka", "dynamic/mainmenu_bg");
+                textureId = Identifier.of("popka", "dynamic/mainmenu_bg_" + TEXTURE_COUNTER.getAndIncrement());
                 MinecraftClient.getInstance().getTextureManager().registerTexture(textureId, texture);
                 loaded = true;
             }
@@ -122,11 +138,10 @@ public class GifTexture {
         for (int y = 0; y < height; y++) {
             for (int x = 0; x < width; x++) {
                 int argb = image.getRGB(x, y);
-                int a = (argb >> 24) & 0xFF;
                 int r = (argb >> 16) & 0xFF;
                 int g = (argb >> 8) & 0xFF;
                 int b = argb & 0xFF;
-                target.setColorArgb(x, y, (a << 24) | (r << 16) | (g << 8) | b);
+                target.setColorArgb(x, y, (0xFF << 24) | (r << 16) | (g << 8) | b);
             }
         }
     }
