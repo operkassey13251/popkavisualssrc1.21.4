@@ -48,7 +48,7 @@ public class DiscordManager implements QClient {
         new Thread(() -> {
             while (running) {
                 try {
-                    discordRichPresence.details = "Name » " + WaterMark.getUsername();
+                    discordRichPresence.details = "Name » t.me/PopkaVisual";
                     discordRichPresence.state = "UID » " + WaterMark.getUID();
                     discordRichPresence.largeImageKey = image;
                     discordRichPresence.button_label_1 = "Купить";

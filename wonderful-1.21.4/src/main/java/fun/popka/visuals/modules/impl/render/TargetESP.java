@@ -8,8 +8,11 @@ import net.minecraft.client.render.Tessellator;
 import net.minecraft.client.render.VertexFormat;
 import net.minecraft.client.render.VertexFormats;
 import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.projectile.ProjectileUtil;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.hit.EntityHitResult;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.RotationAxis;
 import net.minecraft.util.math.Vec3d;
@@ -56,6 +59,8 @@ public class TargetESP extends Module {
     private final FloatSetting ringSpeed = new FloatSetting("Скорость кольца", 1.0f, 0.3f, 3.0f, 0.1f);
     private final FloatSetting rotateSpeed = new FloatSetting("Скорость вращения", 1.2f, 0.2f, 4.0f, 0.05f);
     private final BooleanSetting hurtColor = new BooleanSetting("Окрашивание при ударе", true);
+    private final BooleanSetting showOnHover = new BooleanSetting("Показывать при наведении", false);
+    private final FloatSetting hoverReach = new FloatSetting("Дистанция наведения", 50.0f, 1.0f, 128.0f, 1.0f).visible(showOnHover::isState);
     private final FloatSetting bmwGhostCount = new FloatSetting("Кол-во призраков", 3.0f, 2.0f, 5.0f, 1.0f);
     private final FloatSetting bmwGhostLife = new FloatSetting("Время жизни (мс)", 350.0f, 150.0f, 500.0f, 25.0f);
     private final FloatSetting bmwStrengthXZ = new FloatSetting("Цикл XZ", 2000.0f, 1000.0f, 5000.0f, 100.0f);
@@ -91,7 +96,7 @@ public class TargetESP extends Module {
         bmwStrengthY.visible(() -> mode.is("Райдер"));
         ringRadius.visible(() -> mode.is("Кольцо"));
         ringSpeed.visible(() -> mode.is("Кольцо"));
-        addSettings(mode, size, rotateSpeed, hurtColor, ringRadius, ringSpeed, bmwGhostCount, bmwGhostLife, bmwStrengthXZ, bmwStrengthY);
+        addSettings(mode, size, rotateSpeed, hurtColor, showOnHover, hoverReach, ringRadius, ringSpeed, bmwGhostCount, bmwGhostLife, bmwStrengthXZ, bmwStrengthY);
     }
 
     @Override
@@ -154,6 +159,31 @@ public class TargetESP extends Module {
         return (float) Math.max(0.1, distance * SCALE_FACTOR);
     }
 
+    private LivingEntity getHoverTarget() {
+        if (!showOnHover.isState() || mc == null || mc.player == null || mc.world == null) {
+            return null;
+        }
+        Vec3d eyePos = mc.player.getCameraPosVec(1.0F);
+        Vec3d lookVec = mc.player.getRotationVec(1.0F);
+        float reach = hoverReach.get();
+        Vec3d reachVec = eyePos.add(lookVec.multiply(reach));
+        EntityHitResult result = ProjectileUtil.raycast(
+                mc.player,
+                eyePos,
+                reachVec,
+                mc.player.getBoundingBox().expand(reach),
+                ex -> ex != mc.player && ex.isAlive() && ex instanceof LivingEntity,
+                reach * reach
+        );
+        if (result == null || !(result.getEntity() instanceof LivingEntity living)) {
+            return null;
+        }
+        if (!mc.player.canSee(living)) {
+            return null;
+        }
+        return living;
+    }
+
     @EventLink(priority = Priority.LOW)
     public void onRender3D(Event3DRender event) {
         if (mc == null || mc.player == null || mc.world == null) return;
@@ -161,6 +191,9 @@ public class TargetESP extends Module {
         Aura aura = ModuleClass.INSTANCE.aura;
         boolean auraEnabled = aura != null && aura.isEnable();
         LivingEntity target = auraEnabled ? aura.getTarget() : null;
+        if (target == null || !target.isAlive()) {
+            target = getHoverTarget();
+        }
         boolean hasTarget = target != null && target.isAlive();
         float speed = 0.05f;
         appearValue = animateTo(appearValue, hasTarget ? 1f : 0f, speed);

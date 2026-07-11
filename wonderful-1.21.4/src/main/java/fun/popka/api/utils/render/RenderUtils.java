@@ -840,6 +840,25 @@ public class RenderUtils implements QClient {
         );
     }
 
+    public void drawLiquidGlassPanel(MatrixStack matrices, float x, float y, float width, float height,
+                                     float gradientRadius, float borderRadius, int themeColor) {
+        drawBlur(matrices, x, y, width, height, borderRadius, 8.0f, -1);
+
+        int glowColor = ColorUtils.applyAlpha(themeColor, 0.10f);
+        drawShadow(matrices, x, y, width, height, borderRadius, 6.0f, glowColor);
+
+        int glassTop = ColorUtils.rgba(60, 62, 72, 130);
+        int glassBottom = ColorUtils.rgba(35, 37, 45, 110);
+        drawGradientRect(matrices, x, y, width, height, gradientRadius, glassTop, glassBottom);
+
+        int edgeColor = ColorUtils.rgba(255, 255, 255, 140);
+        drawRoundedRectOutline(matrices, x, y, width, height, borderRadius, borderRadius, borderRadius, borderRadius, 0.6f, edgeColor);
+
+        int innerHighlight = ColorUtils.rgba(255, 255, 255, 55);
+        drawRoundedRectOutline(matrices, x + 0.6f, y + 0.6f, width - 1.2f, height - 1.2f,
+                Math.max(0f, borderRadius - 0.6f), Math.max(0f, borderRadius - 0.6f), Math.max(0f, borderRadius - 0.6f), Math.max(0f, borderRadius - 0.6f), 0.4f, innerHighlight);
+    }
+
     public void drawWaveHudHeader(MatrixStack matrices, float x, float y, float width, float height, float radius,
                                   float shadowRadius, float shadowSoftness,
                                   int leftTop, int leftBottom, int centerTop, int centerBottom, int rightTop, int rightBottom) {
