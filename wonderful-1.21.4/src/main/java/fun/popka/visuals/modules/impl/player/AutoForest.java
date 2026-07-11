@@ -17,7 +17,6 @@ import fun.popka.api.events.EventLink;
 import fun.popka.api.events.implement.EventPacket;
 import fun.popka.api.events.implement.EventUpdate;
 import fun.popka.api.utils.chat.ChatUtils;
-import fun.popka.api.utils.bot.BotSessionManager;
 import fun.popka.visuals.modules.Module;
 import fun.popka.visuals.modules.settings.implement.BooleanSetting;
 import fun.popka.visuals.modules.settings.implement.FloatSetting;
@@ -81,8 +80,6 @@ public class AutoForest extends Module {
         if (currentSessionEnabled && mc.player != null && mc.world != null) {
             tickCurrentSession();
         }
-
-        tickFrozenBots();
     }
 
     private void tickCurrentSession() {
@@ -126,88 +123,6 @@ public class AutoForest extends Module {
         if (preserveVisuals.isState()) {
             updateVisualization(now);
         }
-    }
-
-    private void tickFrozenBots() {
-        for (BotSessionManager.BotConnection bot : BotSessionManager.getConnections()) {
-            SessionState state = bot.autoForestState();
-            if (state == null || !state.enabled() || bot.player() == null || bot.world() == null || bot.handler() == null) {
-                continue;
-            }
-
-            try {
-                tickBotSession(bot, state);
-            } catch (Exception ignored) {
-                state.enabled(false);
-                state.targetPos(null);
-            }
-        }
-    }
-
-    private void tickBotSession(BotSessionManager.BotConnection bot, SessionState state) {
-        if (bot.player().isRemoved() || !bot.player().isAlive()) {
-            state.enabled(false);
-            state.targetPos(null);
-            return;
-        }
-
-        long now = System.currentTimeMillis();
-        long scheduleDelay = Math.max(1000L, (long) (Math.max(1.0f, state.intervalSeconds()) * 500.0f));
-
-        if (state.autoSell() && now - state.lastSellTime() >= scheduleDelay) {
-            bot.handler().sendChatCommand("sellwood");
-            state.lastSellTime(now);
-        }
-
-        if (state.autoPay()) {
-            if (state.payTarget().isBlank()) {
-                if (now - state.lastNickReminderTime() >= NICK_REMINDER_DELAY_MS) {
-                    state.lastNickReminderTime(now);
-                }
-            } else if (now - state.lastPayTime() >= scheduleDelay + 200L) {
-                bot.handler().sendChatCommand("pay " + state.payTarget() + " " + (int) state.payAmount());
-                state.lastPayTime(now);
-            }
-        }
-
-        if (state.targetPos() != null && (!isLog(bot.world(), state.targetPos()) || !isInRange(bot.player(), state.targetPos()) || !isVisible(bot.world(), bot.player(), state.targetPos()))) {
-            state.targetPos(null);
-        }
-
-        if (state.targetPos() == null) {
-            state.targetPos(findNearestLog(bot.world(), bot.player(), state.breakRadius()));
-        }
-
-        if (state.targetPos() == null) {
-            return;
-        }
-
-        if (MODE_FAST_ALIAS.equals(state.modeAlias())) {
-            long interval = Math.max(1L, (long) (1000.0f / Math.max(1.0f, state.packetsPerSecond())));
-            if (now - state.lastPacketTime() < interval) {
-                return;
-            }
-
-            performFastBreak(bot.handler(), bot.interactionManager(), bot.player(), bot.world(), state.targetPos(), state.swing());
-            state.lastPacketTime(now);
-            return;
-        }
-
-        if (now - state.lastBreakTime() < DEFAULT_BREAK_DELAY_MS) {
-            return;
-        }
-
-        if (bot.interactionManager() != null) {
-            bot.interactionManager().attackBlock(state.targetPos(), Direction.UP);
-            bot.interactionManager().updateBlockBreakingProgress(state.targetPos(), Direction.UP);
-        } else {
-            performFastBreak(bot.handler(), bot.interactionManager(), bot.player(), bot.world(), state.targetPos(), state.swing());
-        }
-
-        if (state.swing()) {
-            bot.handler().sendPacket(new net.minecraft.network.packet.c2s.play.HandSwingC2SPacket(Hand.MAIN_HAND));
-        }
-        state.lastBreakTime(now);
     }
 
     @EventLink
@@ -579,78 +494,6 @@ public class AutoForest extends Module {
         lastNickReminderTime = 0L;
     }
 
-    public SessionState captureState() {
-        SessionState state = new SessionState();
-        state.enabled(currentSessionEnabled);
-        state.modeAlias(getModeAlias());
-        state.packetsPerSecond(packetsPerSecond.get());
-        state.breakRadius(breakRadius.get());
-        state.swing(swing.isState());
-        state.autoSell(autoSell.isState());
-        state.autoPay(autoPay.isState());
-        state.preserveVisuals(preserveVisuals.isState());
-        state.payAmount(payAmount.get());
-        state.intervalSeconds(intervalSeconds.get());
-        state.payTarget(payTarget);
-        state.targetPos(targetPos);
-        state.lastBreakTime(lastBreakTime);
-        state.lastPacketTime(lastPacketTime);
-        state.lastSellTime(lastSellTime);
-        state.lastPayTime(lastPayTime);
-        state.lastNickReminderTime(lastNickReminderTime);
-        state.preservedBlocks(new HashMap<>(preservedBlocks));
-        state.lastUpdateTime(new HashMap<>(lastUpdateTime));
-        state.managedBlocks(new HashSet<>(managedBlocks));
-        return state;
-    }
-
-    public void applyState(SessionState state) {
-        if (state == null) {
-            resetToDefaults();
-            return;
-        }
-
-        currentSessionEnabled = state.enabled();
-        setModeAlias(state.modeAlias());
-        packetsPerSecond.setValue(state.packetsPerSecond());
-        breakRadius.setValue(state.breakRadius());
-        swing.setState(state.swing());
-        autoSell.setState(state.autoSell());
-        autoPay.setState(state.autoPay());
-        preserveVisuals.setState(state.preserveVisuals());
-        payAmount.setValue(state.payAmount());
-        intervalSeconds.setValue(state.intervalSeconds());
-        payTarget = state.payTarget();
-        targetPos = state.targetPos();
-        lastBreakTime = state.lastBreakTime();
-        lastPacketTime = state.lastPacketTime();
-        lastSellTime = state.lastSellTime();
-        lastPayTime = state.lastPayTime();
-        lastNickReminderTime = state.lastNickReminderTime();
-        preservedBlocks.clear();
-        preservedBlocks.putAll(state.preservedBlocks());
-        lastUpdateTime.clear();
-        lastUpdateTime.putAll(state.lastUpdateTime());
-        managedBlocks.clear();
-        managedBlocks.addAll(state.managedBlocks());
-    }
-
-    public void resetToDefaults() {
-        currentSessionEnabled = false;
-        setModeAlias(MODE_NORMAL_ALIAS);
-        packetsPerSecond.setValue(DEFAULT_PACKETS_PER_SECOND);
-        breakRadius.setValue(4.0f);
-        swing.setState(true);
-        autoSell.setState(true);
-        autoPay.setState(false);
-        preserveVisuals.setState(true);
-        payAmount.setValue(1000.0f);
-        intervalSeconds.setValue(20.0f);
-        payTarget = "";
-        restoreVisualState();
-        resetRuntimeState();
-    }
-
     private void resetRuntimeState() {
         targetPos = null;
         lastBreakTime = 0L;
@@ -661,69 +504,5 @@ public class AutoForest extends Module {
         preservedBlocks.clear();
         lastUpdateTime.clear();
         managedBlocks.clear();
-    }
-
-    public static final class SessionState {
-        private boolean enabled;
-        private String modeAlias = MODE_NORMAL_ALIAS;
-        private float packetsPerSecond = DEFAULT_PACKETS_PER_SECOND;
-        private float breakRadius = 4.0f;
-        private boolean swing = true;
-        private boolean autoSell = true;
-        private boolean autoPay;
-        private boolean preserveVisuals = true;
-        private float payAmount = 1000.0f;
-        private float intervalSeconds = 20.0f;
-        private String payTarget = "";
-        private BlockPos targetPos;
-        private long lastBreakTime;
-        private long lastPacketTime;
-        private long lastSellTime;
-        private long lastPayTime;
-        private long lastNickReminderTime;
-        private Map<BlockPos, BlockState> preservedBlocks = new HashMap<>();
-        private Map<BlockPos, Long> lastUpdateTime = new HashMap<>();
-        private Set<BlockPos> managedBlocks = new HashSet<>();
-
-        public boolean enabled() { return enabled; }
-        public void enabled(boolean value) { this.enabled = value; }
-        public String modeAlias() { return modeAlias; }
-        public void modeAlias(String value) { this.modeAlias = value == null ? MODE_NORMAL_ALIAS : value; }
-        public float packetsPerSecond() { return packetsPerSecond; }
-        public void packetsPerSecond(float value) { this.packetsPerSecond = value; }
-        public float breakRadius() { return breakRadius; }
-        public void breakRadius(float value) { this.breakRadius = value; }
-        public boolean swing() { return swing; }
-        public void swing(boolean value) { this.swing = value; }
-        public boolean autoSell() { return autoSell; }
-        public void autoSell(boolean value) { this.autoSell = value; }
-        public boolean autoPay() { return autoPay; }
-        public void autoPay(boolean value) { this.autoPay = value; }
-        public boolean preserveVisuals() { return preserveVisuals; }
-        public void preserveVisuals(boolean value) { this.preserveVisuals = value; }
-        public float payAmount() { return payAmount; }
-        public void payAmount(float value) { this.payAmount = value; }
-        public float intervalSeconds() { return intervalSeconds; }
-        public void intervalSeconds(float value) { this.intervalSeconds = value; }
-        public String payTarget() { return payTarget == null ? "" : payTarget; }
-        public void payTarget(String value) { this.payTarget = value == null ? "" : value; }
-        public BlockPos targetPos() { return targetPos; }
-        public void targetPos(BlockPos value) { this.targetPos = value; }
-        public long lastBreakTime() { return lastBreakTime; }
-        public void lastBreakTime(long value) { this.lastBreakTime = value; }
-        public long lastPacketTime() { return lastPacketTime; }
-        public void lastPacketTime(long value) { this.lastPacketTime = value; }
-        public long lastSellTime() { return lastSellTime; }
-        public void lastSellTime(long value) { this.lastSellTime = value; }
-        public long lastPayTime() { return lastPayTime; }
-        public void lastPayTime(long value) { this.lastPayTime = value; }
-        public long lastNickReminderTime() { return lastNickReminderTime; }
-        public void lastNickReminderTime(long value) { this.lastNickReminderTime = value; }
-        public Map<BlockPos, BlockState> preservedBlocks() { return preservedBlocks; }
-        public void preservedBlocks(Map<BlockPos, BlockState> value) { this.preservedBlocks = value == null ? new HashMap<>() : value; }
-        public Map<BlockPos, Long> lastUpdateTime() { return lastUpdateTime; }
-        public void lastUpdateTime(Map<BlockPos, Long> value) { this.lastUpdateTime = value == null ? new HashMap<>() : value; }
-        public Set<BlockPos> managedBlocks() { return managedBlocks; }
-        public void managedBlocks(Set<BlockPos> value) { this.managedBlocks = value == null ? new HashSet<>() : value; }
     }
 }

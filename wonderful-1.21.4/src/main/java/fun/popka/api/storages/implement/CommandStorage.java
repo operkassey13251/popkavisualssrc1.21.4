@@ -30,8 +30,6 @@ public class CommandStorage {
                 new FriendCommand(),
                 new ConfigCommand(),
                 new MacroCommand(),
-                new BotCommand(),
-                new BlockESPCommand(),
                 new NukerCommand(),
                 new NukerCommand("nuk"),
                 new GPSCommand(),

@@ -47,6 +47,7 @@ public enum Popka implements ModInitializer, QClient {
     public MacroStorage macroStorage;
     public StaffStorage staffStorage;
     public WaypointStorage waypointStorage;
+    public AccountChangerStorage accountChangerStorage;
     public DiscordManager discordManager;
     @Getter public UserInfo userInfo = UserInfo.empty();
 

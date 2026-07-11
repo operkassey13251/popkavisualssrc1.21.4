@@ -16,7 +16,7 @@ public class PopkaMainMenuButton extends ButtonWidget {
     private static final int TEXT_HOVER_COLOR = ColorUtils.rgb(255, 255, 255);
     private static final float CORNER_RADIUS = 6f;
     private static final int FONT_SIZE = 14;
-    private static final float VERTICAL_CENTER_OFFSET = 5f;
+    private static final float VERTICAL_CENTER_OFFSET = 6.5f;
 
     public PopkaMainMenuButton(int x, int y, int width, int height, Text message, PressAction onPress) {
         super(x, y, width, height, message, onPress, DEFAULT_NARRATION_SUPPLIER);
