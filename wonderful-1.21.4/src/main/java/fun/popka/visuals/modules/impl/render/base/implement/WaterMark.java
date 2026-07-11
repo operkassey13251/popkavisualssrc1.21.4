@@ -1,6 +1,7 @@
 package fun.popka.visuals.modules.impl.render.base.implement;
 
 import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.util.Identifier;
 import fun.popka.Popka;
 import fun.popka.api.events.implement.EventRender;
 import fun.popka.api.storages.implement.helpertstorages.enumvar.ModuleClass;
@@ -13,6 +14,8 @@ import fun.popka.visuals.modules.impl.render.base.InterfaceProcessing;
 import java.awt.*;
 
 public class WaterMark extends InterfaceProcessing {
+    private static final Identifier ICON_TEXTURE = Identifier.of("popka", "textures/watermark/icon.png");
+
     private boolean showFps = true;
     private boolean showMs = true;
     private boolean showServer = true;
@@ -129,7 +132,6 @@ public class WaterMark extends InterfaceProcessing {
         String pingIconGlyph = "f";
         String fpsIconGlyph = "j";
         String tpsIconGlyph = "y";
-        String glassIconGlyph = "g";
 
         float iconSquareSize = 14f;
 
@@ -167,16 +169,25 @@ public class WaterMark extends InterfaceProcessing {
 
         float panelW = contentW;
 
-        RenderUtils.drawDefaultHudThemedPanel(matrices, x, y, panelW, panelH, 2.8f, 3.3f, themeColor);
+        if (isUnusualRectType()) {
+            RenderUtils.drawLiquidGlassPanel(matrices, x, y, panelW, panelH, 2.8f, 3.3f, themeColor);
+        } else {
+            RenderUtils.drawDefaultHudThemedPanel(matrices, x, y, panelW, panelH, 2.8f, 3.3f, themeColor);
+
+            int iridescentTL = ColorUtils.getThemeColor(0);
+            int iridescentTR = ColorUtils.getThemeColor(90);
+            int iridescentBR = ColorUtils.getThemeColor(180);
+            int iridescentBL = ColorUtils.getThemeColor(270);
+            RenderUtils.drawRoundedRectOutline(matrices, x, y, panelW, panelH, 3.3f, 1.0f,
+                    iridescentTL, iridescentTR, iridescentBL, iridescentBR);
+        }
 
         float iconSquareX = x + pad;
         float iconSquareY = y + (panelH - iconSquareSize) / 2f;
         RenderUtils.drawRoundedRect(matrices, iconSquareX, iconSquareY, iconSquareSize, iconSquareSize, 2f, themeColor);
 
-        float glassIconW = iconNew14.getStringWidth(glassIconGlyph);
-        float glassIconX = iconSquareX + (iconSquareSize - glassIconW) / 2f;
-        float glassIconY = y - 8f;
-        iconNew14.drawGradientStringHorizontal(matrices, glassIconGlyph, glassIconX, glassIconY, themeColor, themeColor);
+        float iconInset = 2f;
+        RenderUtils.drawImage(matrices, ICON_TEXTURE, iconSquareX + iconInset, iconSquareY + iconInset, iconSquareSize - iconInset * 2f, iconSquareSize - iconInset * 2f, whiteColor);
 
         float drawX = x + pad + iconSquareSize + pad;
         float contentY = y + (panelH - 12f) / 2f + 4.6f;
