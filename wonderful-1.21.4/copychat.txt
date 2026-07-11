@@ -1,76 +1,295 @@
-Найди функций ShaderEsp и EntityEsp сделай так чтобы они не отображались через стены, так же если у игрока нету вообще брони/предмета в руках он не отображался тоже а если имеются ХОТЯБЫ БОТИНКИ то показывался, если он в инвизке в целом не показывается никнейм
-+ Thought: 410ms
-→Read src\main\java\fun\popka\visuals\modules\impl\render\ShaderEsp.java 
-→Read src\main\java\fun\popka\visuals\modules\impl\render\EntityESP.java 
-+ Thought: 217ms
-→Read src\main\java\fun\popka\visuals\modules\impl\render\EntityESP.java [offset=1210]
-+ Thought: 2.6s
-Позвольте мне проверить, как shouldOutline интегрируется с системой Minecraft и как осуществляется контроль видимости.
-✱Grep "shouldOutline|forceOutline|setOutlineVertexColor|OutlineVertexConsumerProvider" in src (4 matches)
-$ $realPath = (Get-ChildItem -Path "C:\Users" -Directory | Where-Object { Test-Path "$($_.FullName)\.gradle\caches\fabric-loom" } | ForEach-Object { Get-ChildItem -Path "$($_.FullName)\.gradle\caches\fabric-loom\minecraftMaven" -Recurse -Filter "minecraft-merged-1.21.4-net.fabricmc.yarn*.jar" -ErrorAction SilentlyContinue } | Where-Object { $_.Name -notlike "*sources*" } | Select-Object -First 1).FullName; $javapPath = (Get-ChildItem -Path "C:\Users" -Directory | Where-Object { Test-Path "$($_.FullName)\.jdks" } | ForEach-Object { Get-ChildItem -Path "$($_.FullName)\.jdks" -Recurse -Filter "javap.exe" -ErrorAction SilentlyContinue } | Select-Object -First 1).FullName; & $javapPath -classpath $realPath -p net.minecraft.entity.Entity 2>&1 | Select-String -Pattern "raycast|canSee|isVisible|isInvisible|getRaycast" | Select-Object -First 20
-public net.minecraft.util.hit.HitResult raycast(double, float, boolean);
-  public boolean isInvisible();
-  public boolean isInvisibleTo(net.minecraft.entity.player.PlayerEntity);
-→Read src\main\java\fun\popka\mixin\EntityMixin.java 
-→Read src\main\java\fun\popka\mixin\MinecraftClientMixin.java 
-$ $realPath = (Get-ChildItem -Path "C:\Users" -Directory | Where-Object { Test-Path "$($_.FullName)\.gradle\caches\fabric-loom" } | ForEach-Object { Get-ChildItem -Path "$($_.FullName)\.gradle\caches\fabric-loom\minecraftMaven" -Recurse -Filter "minecraft-merged-1.21.4-net.fabricmc.yarn*.jar" -ErrorAction SilentlyContinue } | Where-Object { $_.Name -notlike "*sources*" } | Select-Object -First 1).FullName; $javapPath = (Get-ChildItem -Path "C:\Users" -Directory | Where-Object { Test-Path "$($_.FullName)\.jdks" } | ForEach-Object { Get-ChildItem -Path "$($_.FullName)\.jdks" -Recurse -Filter "javap.exe" -ErrorAction SilentlyContinue } | Select-Object -First 1).FullName; & $javapPath -classpath $realPath -p net.minecraft.entity.player.PlayerEntity 2>&1 | Select-String -Pattern "canSee|isVisible|raycast" | Select-Object -First 20
-(no output)
-$ $realPath = (Get-ChildItem -Path "C:\Users" -Directory | Where-Object { Test-Path "$($_.FullName)\.gradle\caches\fabric-loom" } | ForEach-Object { Get-ChildItem -Path "$($_.FullName)\.gradle\caches\fabric-loom\minecraftMaven" -Recurse -Filter "minecraft-merged-1.21.4-net.fabricmc.yarn*.jar" -ErrorAction SilentlyContinue } | Where-Object { $_.Name -notlike "*sources*" } | Select-Object -First 1).FullName; $javapPath = (Get-ChildItem -Path "C:\Users" -Directory | Where-Object { Test-Path "$($_.FullName)\.jdks" } | ForEach-Object { Get-ChildItem -Path "$($_.FullName)\.jdks" -Recurse -Filter "javap.exe" -ErrorAction SilentlyContinue } | Select-Object -First 1).FullName; & $javapPath -classpath $realPath -p net.minecraft.entity.LivingEntity 2>&1 | Select-String -Pattern "canSee|isVisible|raycast|getVisibility" | Select-Object -First 20
-public boolean canSee(net.minecraft.entity.Entity);
-  public boolean canSee(net.minecraft.entity.Entity, net.minecraft.world.RaycastContext$ShapeType, net.minecraft.world.
-RaycastContext$FluidHandling, double);
-# Todos
-[•] ShaderEsp: добавить проверку видимости (canSee) в shouldOutline чтобы не рисовать через стены
-[ ] ShaderEsp: добавить проверку брони/предметов для игроков и невидимости
-[ ] ShaderEsp: сделать fill pass с depth test
-[ ] EntityESP: добавить проверку видимости для 2D тегов/брони
-[ ] EntityESP: добавить проверку брони/предметов для игроков
-[ ] EntityESP: не показывать никнейм для невидимых игроков
-[ ] Собрать проект и проверить компиляцию
-Начну с ShaderEsp.java. Сначала добавлю импорт ItemStack:
-← Edit src\main\java\fun\popka\visuals\modules\impl\render\ShaderEsp.java
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.ItemEntity;
-import net.minecraft.entity.decoration.EndCrystalEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.ItemStack;
-import org.lwjgl.opengl.GL11;
-import org.lwjgl.opengl.GL30;
+Найди функций NoVelocity,AutoPVP,AutoLeave,AUtoDuel,ElytraSwap,NoPush,ServerHelper,TpLoot,XCarry,ChestStealer,AutoArmor,AutoEat,Noclip,FastBreak,KtLeave,ItemAim,RPSPOOFER,NUKER,TARGETPEARL,NOJUMPDELAY удали/вырежи из кликгуй и тп
++ Thought: 680ms
+Понял задачу — нужно найти указанные модули/функции в коде (включая кликгуй и связанные места) и вырезать их. Давай начнём с разведки структуры проекта.
+$ git -C "C:\Users\леша\Desktop\popkavisualssrc1.21.4\wonderful-1.21.4" log --oneline -5 2>$null; echo "---"; Get-ChildItem "C:\Users\леша\Desktop\popkavisualssrc1.21.4\wonderful-1.21.4" -Directory | Select-Object -ExpandProperty Name
+e09703e SkyShader+Full esp fix
+ed163da Merge branch 'main' of https://github.com/operkassey13251/popkavisualssrc1.21.4
+87545ec MAINMENU - TEST FIX
+4333d82 1
+f04200c MAINMENU - TESTFIX
+---
+.gradle
+.idea
+build
+gradle
+…
+Click to expand
+Grep "NoVelocity|AutoPVP|AutoLeave|AutoDuel|ElytraSwap|NoPush|ServerHelper|TpLoot|XCarry|ChestStealer|AutoArmor|AutoEat|Noclip|FastBreak|KtLeave|ItemAim|RPSPOOFER|NUKER|TARGETPEARL|NOJUMPDELAY" (99 matches)
++ Thought: 619ms
+Большая задача. Давай разберусь со структурой — где модули регистрируются и как кликгуй к ним обращается.
+Glob "src/main/java/fun/popka/visuals/modules/impl/**/*.java" (100 matches)
+Glob "**/ModuleClass.java" (1 match)
+Glob "**/ModuleRewords.java" (1 match)
++ Thought: 861ms
+Нужно понять систему регистрации модулей. Читаю ключевые файлы и ищу кликгуй.
+Read src\main\java\fun\popka\api\storages\implement\helpertstorages\enumvar\ModuleClass.java 
+Read src\main\java\fun\popka\api\storages\implement\helpertstorages\enumvar\ModuleRewords.java 
++ Thought: 7.2s
+Понял систему. Регистрация в двух местах: ModuleRewords.java (поля) и ModuleClass.add(...) (список для кликгуя). Прежде чем вырезать, мне нужно оценить «радиус поражения» — перекрёстные зависимости. Давай найду ВСЕ ссылки на каждый модуль.
+$ cd "C:\Users\леша\Desktop\popkavisualssrc1.21.4\wonderful-1.21.4\src\main\java"; $mods = "NoVelocity","AutoPvp","AutoLeave","AutoDuel","ElytraSwap","NoPush","ServerHelper","TpLoot","XCarry","ChestStealer","AutoArmor","AutoEat","NoClip","FastBreak","KTLeave","ItemAim","RPSpoofer","Nuker","TargetPearl","NoJumpDelay"; foreach ($m in $mods) { Write-Output "===== $m ====="; rg -n "\b$m\b" --no-heading 2>$null | Where-Object { $_ -notmatch "\\$m\.java:" } }
+===== NoVelocity =====
+rg : ��� "rg" �� �ᯮ����� ��� ��� ���������, �㭪樨, 䠩�� �業��� ��� �믮��塞�� �ணࠬ��. �஢���� �ࠢ��쭮�
+===== AutoPvp =====
+�� ����ᠭ�� �����, � ⠪�� ����稥 � �ࠢ��쭮��� ���, ��᫥ 祣� ������ ������.
+��ப�:1 ����:373
++ ... y"; foreach ($m in $mods) { Write-Output "===== $m ====="; rg -n "\b$ ...
++                                                                ~~
+    + CategoryInfo          : ObjectNotFound: (rg:String) [], CommandNotFoundException
+    + FullyQualifiedErrorId : CommandNotFoundException
+ 
+…
+Click to expand
++ Thought: 10.9s
+rg тут нет, но мой первый поиск через grep уже дал картину ссылок. Прежде чем резать, я нашёл важные перекрёстные зависимости, которые влияют на то, как именно удалять:
+AutoForest (оставляем) использует статические методы FastBreak.accelerateClientBreak / FastBreak.packetBreak
+Aura и TriggerBot (оставляем) используют AutoEat.shouldSuppressCombat()
+HelperBinds (HUD, оставляем) целиком построен поверх ServerHelper
+EntityMixin использует NoPush
+Из-за этого «просто удалить файлы» сломает модули, которые ты НЕ просил трогать. Уточни, пожалуйста, объём:
+# Questions
+Какой объём удаления нужен для этих 20 модулей (NoVelocity, AutoPVP, AutoLeave, AutoDuel, ElytraSwap, NoPush, ServerHelper, TpLoot, XCarry, ChestStealer, AutoArmor, AutoEat, Noclip, FastBreak, KtLeave, ItemAim, RPSPOOFER, NUKER, TARGETPEARL, NOJUMPDELAY)?
+Только из кликгуя (Рекоменд.)
++ Thought: 11.6s
+Выбран вариант «Только из кликгуя». Убираю эти 20 модулей из списка ModuleClass.add(...) — они исчезнут из кликгуя и не будут регистрироваться, при этом файлы и поля остаются, компиляция не ломается, перекрёстные зависимости сохраняются.
+← Edit src\main\java\fun\popka\api\storages\implement\helpertstorages\enumvar\ModuleClass.java
+public void initialize() {
+    this.add(
+            arrows,
+            autoAccept,
+            autoArmor,
+            autoBuy,
+            autoDuel,
+            autoEat,
+            autoLeave,
+            autoForest,
+            autoJoin,
+            autoPvp,
+            nameProtect,
+            autoFish,
+            autoBuy,
+            autoSwap,
+            autoTool,
+            blockesp,
+            blockOverlay,
+            chestStealer,
+            clientSounds,
+            clickPearl,
+            cosmetics,
+            cubes,
+            deathCoord,
+            ecopen,
+            elytraSwap,
+            entityESP,
+            fireworkESP,
+            fastBreak,
+            fastExp,
+            fullBright,
+            helpMessage,
+            hitBubbles,
+            hitMarker,
+            interfaceModule,
+            interpolateF5,
+            itemAim,
+            itemScroller,
+            jumpCircle,
+            killEffect,
+            kTLeave,
+            leavetracker,
+            lineGlyphes,
+            lockSlot,
+            lootTracker,
+            noClip,
+            noJumpDelay,
+            nuker,
+            noPush,
+            noVelocity,
+            noVignette,
+            particle,
+            projectile,
+            scoreboardHP,
+            removals,
+            rPSpoofer,
+            sattelite,
+            seeInvisibles,
+            shaderEsp,
+            shaderHands,
+            shaderSky,
+            serverHelper,
+            shulkerPreview,
+            sonar,
+            sprint,
+            swingAnimations,
+            targetESP,
+            targetPearl,
+            totemAngel,
+            tpLoot,
+            trails,
+            trajectories,
+            viewModel,
+            worldTweaks,
+            xCarry
+            worldTweaks
+    );
+}
+
+private void add(final Module... mod) {
++ Thought: 253ms
+Правка применена. Проверю результат и попробую собрать проект, чтобы убедиться, что ничего не сломалось.
+Read src\main\java\fun\popka\api\storages\implement\helpertstorages\enumvar\ModuleClass.java [offset=15, limit=75]
+Glob "gradlew*" (2 matches)
++ Thought: 678ms
+Файл выглядит корректно — 20 модулей убраны из списка, порядок остальных сохранён. Запускаю компиляцию, чтобы проверить, что ничего не сломалось.
+$ & ".\gradlew.bat" compileJava --no-daemon --console=plain 2>&1 | Select-Object -Last 40
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/9.3.0/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+
+> Configure project :
+Fabric Loom: 1.15.5
+
+> Task :compileJava
+
+BUILD SUCCESSFUL in 24s
+1 actionable task: 1 executed
++ Thought: 223ms
+Готово. BUILD SUCCESSFUL — компиляция прошла.
+Из списка регистрации ModuleClass.add(...) ( ModuleClass.java:16 ) вырезаны все 20 модулей:
+noVelocity, autoPvp, autoLeave, autoDuel, elytraSwap, noPush, serverHelper, tpLoot, xCarry, chestStealer, autoArmor, autoEat, noClip, fastBreak, kTLeave, itemAim, rPSpoofer, nuker, targetPearl, noJumpDelay.
+Они больше не появятся в кликгуе и не регистрируются в списке модулей. Файлы и поля в ModuleRewords оставлены намеренно — благодаря этому перекрёстные зависимости (AutoForest↔FastBreak, Aura/TriggerBot↔AutoEat, HelperBinds↔ServerHelper, EntityMixin↔NoPush) остались рабочими, и проект компилируется.
+▣  Build · GLM 5.2 Fast · 3m 28s
+Ещё убери так же BlockEsp и команду .blockesp, так же из .bind add Все эти функций тоже убери в том числе от туда убери и AutoBuy
+▣  Build · GLM 5.2 Fast · interrupted
+Ещё убери так же BlockEsp и команду к ней .blockesp, так же из .bind add все функций которые ты ранее убрал убери так же в том числе BlockEsp и AutoBuy
++ Thought: 2.8s
+Нужно: убрать BlockESP из кликгуя, удалить команду .blockesp, и из .bind add убрать все ранее вырезанные модули + BlockESP + AutoBuy. Сначала найду систему команд.
+Grep "blockesp|BlockESP|block_esp|blockEsp" (19 matches)
+Glob "**/command/**/*.java" 
+Glob "**/Command*.java" (2 matches)
+Нужно найти команду .bind и её подсписок add. Ищу.
+Glob "**/*Bind*.java" (5 matches)
+Grep ""bind"|BindCommand|class.*Bind.*Command" (11 matches)
+Read src\main\java\fun\popka\api\commands\impl\BindCommand.java 
+Read src\main\java\fun\popka\api\storages\implement\CommandStorage.java 
++ Thought: 7.5s
+Ключевое наблюдение: BindCommand берёт suggest-список для .bind add динамически из ModuleClass.INSTANCE.getObject() ( BindCommand.java:31 и :121 ). Значит все модули, уже вырезанные из ModuleClass.add(), автоматически исчезли из .bind add — их нельзя ни предложить, ни забиндить (выдаст «Модуль не найден»). Отдельного захардкоженного списка нет.
+Поэтому для закрытия задачи нужно:
+Убрать blockesp и autoBuy из ModuleClass.add() → они автоматически уйдут и из .bind add
+Убрать регистрацию команды .blockesp из CommandStorage
+Перечитаю текущий ModuleClass.java (там autoBuy встречается дважды — был дубликат и в оригинале).
+Read src\main\java\fun\popka\api\storages\implement\helpertstorages\enumvar\ModuleClass.java [limit=60, offset=15]
+Убираю autoBuy (оба вхождения, строки 19 и 24) и blockesp (строка 27) из списка.
+← Edit src\main\java\fun\popka\api\storages\implement\helpertstorages\enumvar\ModuleClass.java
+public void initialize() {
+    this.add(
+            arrows,
+            autoAccept,
+            autoBuy,
+            autoForest,
+            autoJoin,
+            nameProtect,
+            autoFish,
+            autoBuy,
+            autoSwap,
+            autoTool,
+            blockesp,
+            blockOverlay,
+            clientSounds,
+            clickPearl,
+            cosmetics,
+Теперь убираю регистрацию команды .blockesp из CommandStorage.
+← Edit src\main\java\fun\popka\api\storages\implement\CommandStorage.java
+new FriendCommand(),
+new ConfigCommand(),
+new MacroCommand(),
+new BotCommand(),
+new BlockESPCommand(),
+new NukerCommand(),
+new NukerCommand("nuk"),
+new GPSCommand(),
+new BindCommand(),
++ Thought: 607ms
+Запускаю компиляцию для проверки.
+$ & ".\gradlew.bat" compileJava --no-daemon --console=plain 2>&1 | Select-Object -Last 30
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/9.3.0/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+
+> Configure project :
+Fabric Loom: 1.15.5
+
+> Task :compileJava
+gradlew.bat : Note: C:\Users\леша\Desktop\popkavisualssrc1.21.4\wonderful-1.21.4\src\main\java\fun\popka\visuals\mo
+
+[Incubating] Problems report is available at: file:///C:/Users/%D0%BB%D0%B5%D1%88%D0%B0/Desktop/popkavisualssrc1.21.4/wonderful-1.21.4/build/reports/problems/problems-report.html
+…
+Click to expand
+BUILD SUCCESSFUL (предупреждение про deprecated API в AutoTrap.java — не связано с нашими изменениями).
+Готово. Что сделано:
+Из кликгуя (ModuleClass.java:16 ) убраны blockesp и autoBuy (оба вхождения, был дубликат). Теперь в кликгуе нет BlockESP и AutoBuy, плюс 20 ранее вырезанных модулей.
+Команда .blockesp убрана — удалена регистрация new BlockESPCommand() из CommandStorage.java:34. Сама команда больше не регистрируется и не работает.
+.bind add — отдельного списка модулей там нет: команда берёт suggest-подсказки и ищет модули динамически из ModuleClass.INSTANCE.getObject() ( BindCommand.java:31, :121 ). Поэтому все 22 вырезанных модуля (20 + BlockESP + AutoBuy) автоматически исчезли из .bind add — их нельзя предложить автодополнением и нельзя забиндить (ответ «Модуль не найден»). Дополнительно править BindCommand не требовалось.
+Файлы модулей и поля в ModuleRewords оставлены намеренно (как договорились ранее) — компиляция проходит, перекрёстные зависимости не нарушены.
+▣  Build · GLM 5.2 Fast · 1m 2s
+Вырежи команду .bot и весь её функционал в целом
++ Thought: 502ms
+Нужно найти BotCommand и весь связанный с ботами функционал. Разведываю.
+Glob "**/BotCommand.java" (1 match)
+Glob "**/*[Bb]ot*.java" (5 matches)
+Grep "BotCommand|botStorage|BotStorage|MacroBot|BotManager|botManager" (3 matches)
++ Thought: 365ms
+AntiBot, AimBot, TriggerBot — combat-модули, не относятся к команде .bot. Читаю BotCommand.java и BotSessionManager.java чтобы понять реальный функционал.
+Read src\main\java\fun\popka\api\commands\impl\BotCommand.java 
+Read src\main\java\fun\popka\api\utils\bot\BotSessionManager.java 
++ Thought: 632ms
+Большой функционал. Найду все ссылки на BotSessionManager и связанные с ним точки входа, чтобы понять весь радиус.
+Grep "BotSessionManager" (26 matches)
+Grep "IMinecraftClientAccessor|bot_filter|pulseBots|isIgnoreBotMessages|shouldBypassResourcePacks|finishBotConnectStage|bypassResourcePacksDuringBotConnect" (25 matches)
++ Thought: 2.7s
+Картина ясна. Функционал .bot разбросан по нескольким файлам. Прежде чем резать, прочитаю связанные места.
+Read src\main\java\fun\popka\mixin\ClientPlayNetworkHandlerMixin.java 
+Read src\main\java\fun\popka\visuals\modules\impl\render\RPSpoofer.java 
+Read src\main\java\fun\popka\visuals\modules\impl\player\AutoForest.java 
++ Thought: 3.7s
+Нужно проверить, кто ещё использует AutoForest.captureState/applyState/resetToDefaults/SessionState — это может быть связано с ботом или с командой .autoles.
+Grep "captureState|applyState|resetToDefaults|SessionState|tickFrozenBots|tickBotSession|enableForCurrentSession|disableForCurrentSession" (21 matches)
+Read src\main\java\fun\popka\api\commands\impl\AutoLesCommand.java 
++ Thought: 5.3s
+Полная картина ясна. План:
+captureState/applyState/resetToDefaults/SessionState в AutoForest использовались только ботом — уберу их
+enableForCurrentSession/disableForCurrentSession использует .autoles — оставляю
+IMinecraftClientAccessor нужен FastExp (setItemUseCooldown) — не трогаю
+BaritoneAntiStuck не связан с ботом — не трогаю
+Начинаю правки. Сначала простые файлы.
+Edit src\main\java\fun\popka\api\storages\implement\CommandStorage.java 
+Стоп — в прошлом шаге я уже убрал BlockESPCommand. Перечитаю текущее состояние файла.
+Read src\main\java\fun\popka\api\storages\implement\CommandStorage.java [offset=27, limit=16]
+← Edit src\main\java\fun\popka\api\storages\implement\CommandStorage.java
+new AutoLesCommand(),
+new FriendCommand(),
+new ConfigCommand(),
+new MacroCommand(),
+new BotCommand(),
+new NukerCommand(),
+new NukerCommand("nuk"),
+new GPSCommand(),
+new BindCommand(),
+Теперь RPSpoofer.java — убираю зависимость от BotSessionManager.
+← Edit src\main\java\fun\popka\visuals\modules\impl\render\RPSpoofer.java
+import net.minecraft.network.packet.c2s.common.ResourcePackStatusC2SPacket;
+import net.minecraft.network.packet.s2c.common.ResourcePackSendS2CPacket;
 import fun.popka.api.events.EventLink;
-import fun.popka.api.events.Priority;
-Теперь модифицирую shouldOutline — добавлю проверку видимости, брони/предметов и невидимости:
-← Edit src\main\java\fun\popka\visuals\modules\impl\render\ShaderEsp.java
-    if (!entity.isAlive()) return false;
-    if (entity.isRemoved()) return false;
-    if (entity == mc.player && !targets.is("Себя")) return false;
-    if (entity.squaredDistanceTo(mc.player) > MAX_RANGE * MAX_RANGE) return false;
-    if (!mc.player.canSee(entity)) return false;
+import fun.popka.api.events.implement.EventPacket;
+import fun.popka.api.utils.bot.BotSessionManager;
+import fun.popka.visuals.modules.Module;
 
-    if (entity instanceof PlayerEntity) {
-        return targets.is("Игроки");
-    if (entity instanceof PlayerEntity player) {
-        if (!targets.is("Игроки")) return false;
-        if (player.isInvisible()) return false;
-        if (!hasAnyArmorOrItems(player)) return false;
-        return true;
-    }
-    if (entity instanceof EndCrystalEntity) {
-        return targets.is("Кристаллы");
-    }
-    }
-    return false;
+import java.util.UUID;
+
+← Edit src\main\java\fun\popka\visuals\modules\impl\render\RPSpoofer.java
 }
 
-private boolean hasAnyArmorOrItems(PlayerEntity player) {
-    if (!player.getMainHandStack().isEmpty()) return true;
-    if (!player.getOffHandStack().isEmpty()) return true;
-    for (ItemStack stack : player.getArmorItems()) {
-        if (!stack.isEmpty()) return true;
-    }
-    return false;
-}
-
-private boolean hasOutlineTargets() {
-    if (mc.world == null || mc.player == null) {
-        return false;
-    }
+@EventLink
+public void onReceivePacket(EventPacket e) {
+    if (e.getPacket() instanceof ResourcePackSendS2CPacket packet && (isEnable() || BotSessionManager.shouldBypassResourcePacks())) {
+    if (e.getPacket() instanceof ResourcePackSendS2CPacket packet && isEnable()) {
+        UUID packId = packet.id();
+        mc.getNetworkHandler().sendPacket(new ResourcePackStatusC2SPacket(packId, ResourcePackStatusC2SPacket.Status.ACCEPTED));
+        mc.getNetworkHandler().sendPacket(new ResourcePackStatusC2SPacket(packId, ResourcePackStatusC2SPacket.Status.SUCCESSFULLY_LOADED));
+        e.setCancelled(true);

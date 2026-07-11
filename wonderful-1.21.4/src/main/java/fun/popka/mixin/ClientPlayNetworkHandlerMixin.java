@@ -7,7 +7,6 @@ import net.minecraft.client.world.ClientWorld;
 import net.minecraft.network.packet.s2c.play.EntityPositionSyncS2CPacket;
 import net.minecraft.network.packet.s2c.play.EntityVelocityUpdateS2CPacket;
 import net.minecraft.network.packet.s2c.play.ExplosionS2CPacket;
-import net.minecraft.network.packet.s2c.play.GameJoinS2CPacket;
 import net.minecraft.network.packet.s2c.play.GameMessageS2CPacket;
 import net.minecraft.util.Formatting;
 import org.jetbrains.annotations.NotNull;
@@ -20,7 +19,6 @@ import fun.popka.Popka;
 import fun.popka.api.events.implement.EventPacket;
 import fun.popka.api.storages.implement.helpertstorages.enumvar.ModuleClass;
 import fun.popka.api.utils.baritone.BaritoneAntiStuck;
-import fun.popka.api.utils.bot.BotSessionManager;
 import fun.popka.api.utils.chat.ChatUtils;
 
 @Mixin(ClientPlayNetworkHandler.class)
@@ -71,10 +69,5 @@ public abstract class ClientPlayNetworkHandlerMixin {
     @Inject(method = "onGameMessage", at = @At("HEAD"))
     private void onGameMessage(GameMessageS2CPacket packet, CallbackInfo ci) {
         BaritoneAntiStuck.onGameMessage(packet.content().getString());
-    }
-
-    @Inject(method = "onGameJoin", at = @At("HEAD"))
-    private void onGameJoin(GameJoinS2CPacket packet, CallbackInfo ci) {
-        BotSessionManager.finishBotConnectStage();
     }
 }
