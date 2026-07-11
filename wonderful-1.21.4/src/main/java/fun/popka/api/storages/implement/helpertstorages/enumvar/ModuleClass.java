@@ -73,6 +73,7 @@ public class ModuleClass extends GlobalObject<Module> implements ModuleRewords {
                 seeInvisibles,
                 shaderEsp,
                 shaderHands,
+                shaderSky,
                 serverHelper,
                 shulkerPreview,
                 sonar,

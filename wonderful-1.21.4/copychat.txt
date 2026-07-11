@@ -1,359 +1,76 @@
-Изучи copychat.txt изучи я там в прошлом чате задавал задание но выдало ошибку изучи и доделай задачу
-+ Thought: 148ms
-✱Glob "**/copychat.txt" (1 match)
-→Read copychat.txt 
-+ Thought: 917ms
-Let me explore the current state of the codebase to understand what was done and what remains.
-→Read src\main\java\fun\popka\visuals\ui\mainmenu 
-→Read src\main\resources\popka.mixins.json 
+Найди функций ShaderEsp и EntityEsp сделай так чтобы они не отображались через стены, так же если у игрока нету вообще брони/предмета в руках он не отображался тоже а если имеются ХОТЯБЫ БОТИНКИ то показывался, если он в инвизке в целом не показывается никнейм
++ Thought: 410ms
+→Read src\main\java\fun\popka\visuals\modules\impl\render\ShaderEsp.java 
+→Read src\main\java\fun\popka\visuals\modules\impl\render\EntityESP.java 
++ Thought: 217ms
+→Read src\main\java\fun\popka\visuals\modules\impl\render\EntityESP.java [offset=1210]
++ Thought: 2.6s
+Позвольте мне проверить, как shouldOutline интегрируется с системой Minecraft и как осуществляется контроль видимости.
+✱Grep "shouldOutline|forceOutline|setOutlineVertexColor|OutlineVertexConsumerProvider" in src (4 matches)
+$ $realPath = (Get-ChildItem -Path "C:\Users" -Directory | Where-Object { Test-Path "$($_.FullName)\.gradle\caches\fabric-loom" } | ForEach-Object { Get-ChildItem -Path "$($_.FullName)\.gradle\caches\fabric-loom\minecraftMaven" -Recurse -Filter "minecraft-merged-1.21.4-net.fabricmc.yarn*.jar" -ErrorAction SilentlyContinue } | Where-Object { $_.Name -notlike "*sources*" } | Select-Object -First 1).FullName; $javapPath = (Get-ChildItem -Path "C:\Users" -Directory | Where-Object { Test-Path "$($_.FullName)\.jdks" } | ForEach-Object { Get-ChildItem -Path "$($_.FullName)\.jdks" -Recurse -Filter "javap.exe" -ErrorAction SilentlyContinue } | Select-Object -First 1).FullName; & $javapPath -classpath $realPath -p net.minecraft.entity.Entity 2>&1 | Select-String -Pattern "raycast|canSee|isVisible|isInvisible|getRaycast" | Select-Object -First 20
+public net.minecraft.util.hit.HitResult raycast(double, float, boolean);
+  public boolean isInvisible();
+  public boolean isInvisibleTo(net.minecraft.entity.player.PlayerEntity);
+→Read src\main\java\fun\popka\mixin\EntityMixin.java 
 →Read src\main\java\fun\popka\mixin\MinecraftClientMixin.java 
-+ Thought: 117ms
-→Read src\main\java\fun\popka\visuals\ui\mainmenu\PopkaTitleScreen.java 
-→Read src\main\java\fun\popka\visuals\ui\mainmenu\PopkaMainMenuButton.java 
-→Read src\main\java\fun\popka\visuals\ui\mainmenu\GifTexture.java 
-+ Thought: 5.4s
-Let me look at existing mixins and the RenderUtils to understand the codebase conventions.
-→Read src\main\java\fun\popka\api\utils\render\RenderUtils.java 
-→Read src\main\java\fun\popka\mixin\ChatScreenMixin.java 
-✱Glob "src/main/java/fun/popka/mixin/*Screen*.java" (3 matches)
-+ Thought: 423ms
-Let me check the Fonts class, the gif resource location, and an existing renderBackground override pattern.
-→Read src\main\java\fun\popka\api\utils\render\fonts\msdf\Fonts.java 
-✱Glob "src/main/resources/popka/textures/gui/*" 
-→Read src\main\java\fun\popka\mixin\HandledScreenMixin.java 
-+ Thought: 421ms
-✱Glob "src/main/resources/**/fon.gif" (1 match)
-✱Glob "src/main/resources/**/fon.*" (1 match)
-→Read src\main\java\fun\popka\api\utils\color\ColorUtils.java 
-+ Thought: 4.0s
-Now let me verify the exact method signatures in the Minecraft jar to write correct mixins. Let me extract and inspect the relevant classes.
-$ $jarPath = "C:\Users\леша\.gradle\caches\fabric-loom\minecraftMaven\net\minecraft\minecraft-merged\1.21.4-net.fabricmc.yarn.1_21_4.1.21.4+build.8-v2\minecraft-merged-1.21.4-net.fabricmc.yarn.1_21_4.1.21.4+build.8-v2.jar"; Test-Path $jarPath
-True
-+ Thought: 103ms
-$ $jarPath = "C:\Users\леша\.gradle\caches\fabric-loom\minecraftMaven\net\minecraft\minecraft-merged\1.21.4-net.fabricmc.yarn.1_21_4.1.21.4+build.8-v2\minecraft-merged-1.21.4-net.fabricmc.yarn.1_21_4.1.21.4+build.8-v2.jar"; $out = "C:\Users\CB75~1\AppData\Local\Temp\opencode\mccls"; New-Item -ItemType Directory -Path $out -Force | Out-Null; Add-Type -AssemblyName System.IO.Compression.FileSystem; $zip = [System.IO.Compression.ZipFile]::OpenRead($jarPath); $names = @("net/minecraft/client/gui/widget/ButtonWidget.class","net/minecraft/client/gui/widget/PressableWidget.class","net/minecraft/client/gui/screen/Screen.class","net/minecraft/client/gui/screen/multiplayer/MultiplayerScreen.class","net/minecraft/client/gui/screen/world/SelectWorldScreen.class","net/minecraft/client/gui/screen/option/OptionsScreen.class","net/minecraft/client/gui/screen/option/OptionsScreen.class"); foreach ($n in $names) { $e = $zip.GetEntry($n); if ($e -ne $null) { $dst = Join-Path $out ($n -replace '/', '_'); [System.IO.Compression.ZipFileExtensions]::ExtractToFile($e, $dst, $true) } }; $zip.Dispose(); Get-ChildItem $out | Select-Object Name
-Name                                                               
-----                                                               
-net_minecraft_client_gui_screen_multiplayer_MultiplayerScreen.class
-net_minecraft_client_gui_screen_option_OptionsScreen.class         
-net_minecraft_client_gui_screen_Screen.class                       
-net_minecraft_client_gui_screen_world_SelectWorldScreen.class      
-net_minecraft_client_gui_widget_ButtonWidget.class                 
-net_minecraft_client_gui_widget_ClickableWidget.class              
-net_minecraft_client_gui_widget_PressableWidget.class
-$ $out = "C:\Users\CB75~1\AppData\Local\Temp\opencode\mccls"; & "C:\Program Files\Java\jdk-17\bin\javap.exe" -p "$out\net_minecraft_client_gui_widget_ButtonWidget.class" 2>$null
-Compiled from "ButtonWidget.java"
-public class net.minecraft.client.gui.widget.ButtonWidget extends net.minecraft.client.gui.widget.PressableWidget {
-  public static final int DEFAULT_WIDTH_SMALL;
-  public static final int DEFAULT_WIDTH;
-  public static final int field_49479;
-  public static final int DEFAULT_HEIGHT;
-  public static final int field_46856;
-  protected static final net.minecraft.client.gui.widget.ButtonWidget$NarrationSupplier DEFAULT_NARRATION_SUPPLIER;
-  protected final net.minecraft.client.gui.widget.ButtonWidget$PressAction onPress;
-  protected final net.minecraft.client.gui.widget.ButtonWidget$NarrationSupplier narrationSupplier;
-…
-Click to expand
-$ $out = "C:\Users\CB75~1\AppData\Local\Temp\opencode\mccls"; & "C:\Program Files\Java\jdk-17\bin\javap.exe" -p "$out\net_minecraft_client_gui_widget_PressableWidget.class" 2>$null
-Compiled from "PressableWidget.java"
-public abstract class net.minecraft.client.gui.widget.PressableWidget extends net.minecraft.client.gui.widget.ClickableWidget {
-  protected static final int field_43050;
-  private static final net.minecraft.client.gui.screen.ButtonTextures TEXTURES;
-  public net.minecraft.client.gui.widget.PressableWidget(int, int, int, int, net.minecraft.text.Text);
-  public abstract void onPress();
-  protected void renderWidget(net.minecraft.client.gui.DrawContext, int, int, float);
-  public void drawMessage(net.minecraft.client.gui.DrawContext, net.minecraft.client.font.TextRenderer, int);
-  public void onClick(double, double);
-  public boolean keyPressed(int, int, int);
-…
-Click to expand
-+ Thought: 1.4s
-$ $out = "C:\Users\CB75~1\AppData\Local\Temp\opencode\mccls"; & "C:\Program Files\Java\jdk-17\bin\javap.exe" -p "$out\net_minecraft_client_gui_screen_Screen.class" 2>$null | Select-String -Pattern "renderBackground|renderPanorama|renderDirtBackground|renderInGameBackground|renderWorldBackground|void render|init\(|removed\(|clearAndInit"
-public final void renderWithTooltip(net.minecraft.client.gui.DrawContext, int, int, float);
-  public void render(net.minecraft.client.gui.DrawContext, int, int, float);
-  public final void init(net.minecraft.client.MinecraftClient, int, int);
-  protected void clearAndInit();
-  protected void init();
-  public void removed();
-  public void renderBackground(net.minecraft.client.gui.DrawContext, int, int, float);
-  protected void renderPanoramaBackground(net.minecraft.client.gui.DrawContext, float);
-  protected void renderDarkening(net.minecraft.client.gui.DrawContext);
-  protected void renderDarkening(net.minecraft.client.gui.DrawContext, int, int, int, int);
-…
-Click to expand
-$ $out = "C:\Users\CB75~1\AppData\Local\Temp\opencode\mccls"; & "C:\Program Files\Java\jdk-17\bin\javap.exe" -p "$out\net_minecraft_client_gui_screen_multiplayer_MultiplayerScreen.class" 2>$null | Select-String -Pattern "renderBackground|void render|init\(|removed\(|class |extends"
-public class net.minecraft.client.gui.screen.multiplayer.MultiplayerScreen extends net.minecraft.client.gui.screen.Scre
-en {
-  protected void init();
-  public void removed();
-  public void render(net.minecraft.client.gui.DrawContext, int, int, float);
-$ $out = "C:\Users\CB75~1\AppData\Local\Temp\opencode\mccls"; & "C:\Program Files\Java\jdk-17\bin\javap.exe" -p "$out\net_minecraft_client_gui_screen_option_OptionsScreen.class" 2>$null | Select-String -Pattern "renderBackground|void render|init\(|removed\(|class |extends"
-public class net.minecraft.client.gui.screen.option.OptionsScreen extends net.minecraft.client.gui.screen.Screen {
-  protected void init();
-  public void removed();
-$ $out = "C:\Users\CB75~1\AppData\Local\Temp\opencode\mccls"; & "C:\Program Files\Java\jdk-17\bin\javap.exe" -p "$out\net_minecraft_client_gui_screen_world_SelectWorldScreen.class" 2>$null | Select-String -Pattern "renderBackground|void render|init\(|removed\(|class |extends"
-public class net.minecraft.client.gui.screen.world.SelectWorldScreen extends net.minecraft.client.gui.screen.Screen {
-  protected void init();
-  public void render(net.minecraft.client.gui.DrawContext, int, int, float);
-  public void removed();
-+ Thought: 6.0s
-$ $out = "C:\Users\CB75~1\AppData\Local\Temp\opencode\mccls"; & "C:\Program Files\Java\jdk-17\bin\javap.exe" -p "$out\net_minecraft_client_gui_widget_ClickableWidget.class" 2>$null | Select-String -Pattern "getX|getY|getWidth|getHeight|isHovered|getMessage|active|visible|setX|setY"
-public boolean active;
-  public boolean visible;
-  public int getHeight();
-  public int getWidth();
-  public net.minecraft.text.Text getMessage();
-  public boolean isHovered();
-  public int getX();
-  public void setX(int);
-  public int getY();
-  public void setY(int);
-$ $jarPath = "C:\Users\леша\.gradle\caches\fabric-loom\minecraftMaven\net\minecraft\minecraft-merged\1.21.4-net.fabricmc.yarn.1_21_4.1.21.4+build.8-v2\minecraft-merged-1.21.4-net.fabricmc.yarn.1_21_4.1.21.4+build.8-v2.jar"; $out = "C:\Users\CB75~1\AppData\Local\Temp\opencode\mccls"; Add-Type -AssemblyName System.IO.Compression.FileSystem; $zip = [System.IO.Compression.ZipFile]::OpenRead($jarPath); $e = $zip.GetEntry("net/minecraft/client/gui/widget/ClickableWidget.class"); if ($e -ne $null) { $dst = Join-Path $out "ClickableWidget.class"; [System.IO.Compression.ZipFileExtensions]::ExtractToFile($e, $dst, $true) }; $zip.Dispose(); & "C:\Program Files\Java\jdk-17\bin\javap.exe" -p "$out\ClickableWidget.class" 2>$null | Select-String -Pattern "getX|getY|getWidth|getHeight|isHovered|getMessage|public boolean active|public boolean visible"
-public boolean active;
-  public boolean visible;
-  public int getHeight();
-  public int getWidth();
-  public net.minecraft.text.Text getMessage();
-  public boolean isHovered();
-  public int getX();
-  public int getY();
-+ Thought: 423ms
-→Read src\main\java\fun\popka\api\utils\render\fonts\msdf\Font.java [limit=60]
-$ $out = "C:\Users\CB75~1\AppData\Local\Temp\opencode\mccls"; & "C:\Program Files\Java\jdk-17\bin\javap.exe" -p -c "$out\net_minecraft_client_gui_screen_Screen.class" 2>$null | Select-String -Pattern "renderBackground" | Select-Object -First 5
-6: invokevirtual #203                // Method renderBackground:(Lnet/minecraft/client/gui/DrawContext;IIF)V
-  public void renderBackground(net.minecraft.client.gui.DrawContext, int, int, float);
-      28: invokestatic  #637                // Method renderBackgroundTexture:(Lnet/minecraft/client/gui/DrawContext;Ln
-et/minecraft/util/Identifier;IIFFII)V
-  public static void renderBackgroundTexture(net.minecraft.client.gui.DrawContext, net.minecraft.util.Identifier, int, 
-int, float, float, int, int);
-+ Thought: 8.2s
-Let me check the widget class hierarchy to decide which widgets to restyle (avoiding sliders).
-$ $jarPath = "C:\Users\леша\.gradle\caches\fabric-loom\minecraftMaven\net\minecraft\minecraft-merged\1.21.4-net.fabricmc.yarn.1_21_4.1.21.4+build.8-v2\minecraft-merged-1.21.4-net.fabricmc.yarn.1_21_4.1.21.4+build.8-v2.jar"; $out = "C:\Users\CB75~1\AppData\Local\Temp\opencode\mccls"; Add-Type -AssemblyName System.IO.Compression.FileSystem; $zip = [System.IO.Compression.ZipFile]::OpenRead($jarPath); $names = @("net/minecraft/client/gui/widget/CyclingButtonWidget.class","net/minecraft/client/gui/widget/SliderWidget.class","net/minecraft/client/gui/widget/AbstractButtonWidget.class"); foreach ($n in $names) { $e = $zip.GetEntry($n); if ($e -ne $null) { $dst = Join-Path $out ($n -replace '/', '_'); [System.IO.Compression.ZipFileExtensions]::ExtractToFile($e, $dst, $true) } }; $zip.Dispose(); Get-ChildItem $out -Filter "*Cycling*" | Select-Object Name; Get-ChildItem $out -Filter "*Slider*" | Select-Object Name; Get-ChildItem $out -Filter "*AbstractButton*" | Select-Object Name
-Name                                                     
-----                                                     
-net_minecraft_client_gui_widget_CyclingButtonWidget.class
-net_minecraft_client_gui_widget_SliderWidget.class
-$ $out = "C:\Users\CB75~1\AppData\Local\Temp\opencode\mccls"; & "C:\Program Files\Java\jdk-17\bin\javap.exe" -p "$out\net_minecraft_client_gui_widget_CyclingButtonWidget.class" 2>$null | Select-String -Pattern "class |extends|renderWidget"; "----"; & "C:\Program Files\Java\jdk-17\bin\javap.exe" -p "$out\net_minecraft_client_gui_widget_SliderWidget.class" 2>$null | Select-String -Pattern "class |extends|renderWidget"
-public class net.minecraft.client.gui.widget.CyclingButtonWidget<T> extends net.minecraft.client.gui.widget.PressableWi
-dget {
-----
-public abstract class net.minecraft.client.gui.widget.SliderWidget extends net.minecraft.client.gui.widget.ClickableWid
-get {
-  public void renderWidget(net.minecraft.client.gui.DrawContext, int, int, float);
-+ Thought: 5.0s
-$ $out = "C:\Users\CB75~1\AppData\Local\Temp\opencode\mccls"; & "C:\Program Files\Java\jdk-17\bin\javap.exe" -p -c "$out\net_minecraft_client_gui_screen_multiplayer_MultiplayerScreen.class" 2>$null | Select-String -Pattern "render|renderBackground|super" -Context 0,0 | Select-Object -First 20
-public void render(net.minecraft.client.gui.DrawContext, int, int, float);
-       6: invokespecial #426                // Method net/minecraft/client/gui/screen/Screen.render:(Lnet/minecraft/cli
-ent/gui/DrawContext;IIF)V
-      11: getfield      #430                // Field textRenderer:Lnet/minecraft/client/font/TextRenderer;
-      29: invokevirtual #440                // Method net/minecraft/client/gui/DrawContext.drawCenteredTextWithShadow:(
-Lnet/minecraft/client/font/TextRenderer;Lnet/minecraft/text/Text;III)V
-+ Thought: 8.0s
-$ Get-ChildItem -Path "src\main\java\fun\popka\api\QClient.java" | Select-Object Name; Select-String -Path "src\main\java\fun\popka\api\QClient.java" -Pattern "mc|interface|default|getMc" | Select-Object -First 20
-Name        
-----        
-QClient.java
-→Read src\main\java\fun\popka\api\QClient.java 
-+ Thought: 5.8s
-$ $out = "C:\Users\CB75~1\AppData\Local\Temp\opencode\mccls"; & "C:\Program Files\Java\jdk-17\bin\javap.exe" -p "$out\net_minecraft_client_gui_screen_Screen.class" 2>$null | Select-String -Pattern "width|height|client|protected|public" | Select-Object -First 15
-public abstract class net.minecraft.client.gui.screen.Screen extends net.minecraft.client.gui.AbstractParentElement imp
-lements net.minecraft.client.gui.Drawable {
-  protected static final net.minecraft.client.gui.CubeMapRenderer PANORAMA_RENDERER;
-  protected static final net.minecraft.client.gui.RotatingCubeMapRenderer ROTATING_PANORAMA_RENDERER;
-  public static final net.minecraft.util.Identifier MENU_BACKGROUND_TEXTURE;
-  public static final net.minecraft.util.Identifier HEADER_SEPARATOR_TEXTURE;
-  public static final net.minecraft.util.Identifier FOOTER_SEPARATOR_TEXTURE;
-  public static final net.minecraft.util.Identifier INWORLD_HEADER_SEPARATOR_TEXTURE;
-  public static final net.minecraft.util.Identifier INWORLD_FOOTER_SEPARATOR_TEXTURE;
-  protected final net.minecraft.text.Text title;
-…
-Click to expand
-+ Thought: 1.6s
-I have all the information I need. The previous chat was researching the Minecraft classes to write mixins for restyling the multiplayer, singleplayer, and options screens with the main menu's button style and gif background. It failed with "Payment Required" before writing any code.
-My plan:
-- PopkaMenuBackground — shared gif background helper
-- ScreenBackgroundMixin — inject into Screen.renderBackground to draw the gif for the 3 target screens
-- MenuButtonWidgetMixin — inject into PressableWidget.renderWidget to draw main-menu-style buttons (skips sliders since SliderWidget extends ClickableWidget, not PressableWidget)
+$ $realPath = (Get-ChildItem -Path "C:\Users" -Directory | Where-Object { Test-Path "$($_.FullName)\.gradle\caches\fabric-loom" } | ForEach-Object { Get-ChildItem -Path "$($_.FullName)\.gradle\caches\fabric-loom\minecraftMaven" -Recurse -Filter "minecraft-merged-1.21.4-net.fabricmc.yarn*.jar" -ErrorAction SilentlyContinue } | Where-Object { $_.Name -notlike "*sources*" } | Select-Object -First 1).FullName; $javapPath = (Get-ChildItem -Path "C:\Users" -Directory | Where-Object { Test-Path "$($_.FullName)\.jdks" } | ForEach-Object { Get-ChildItem -Path "$($_.FullName)\.jdks" -Recurse -Filter "javap.exe" -ErrorAction SilentlyContinue } | Select-Object -First 1).FullName; & $javapPath -classpath $realPath -p net.minecraft.entity.player.PlayerEntity 2>&1 | Select-String -Pattern "canSee|isVisible|raycast" | Select-Object -First 20
+(no output)
+$ $realPath = (Get-ChildItem -Path "C:\Users" -Directory | Where-Object { Test-Path "$($_.FullName)\.gradle\caches\fabric-loom" } | ForEach-Object { Get-ChildItem -Path "$($_.FullName)\.gradle\caches\fabric-loom\minecraftMaven" -Recurse -Filter "minecraft-merged-1.21.4-net.fabricmc.yarn*.jar" -ErrorAction SilentlyContinue } | Where-Object { $_.Name -notlike "*sources*" } | Select-Object -First 1).FullName; $javapPath = (Get-ChildItem -Path "C:\Users" -Directory | Where-Object { Test-Path "$($_.FullName)\.jdks" } | ForEach-Object { Get-ChildItem -Path "$($_.FullName)\.jdks" -Recurse -Filter "javap.exe" -ErrorAction SilentlyContinue } | Select-Object -First 1).FullName; & $javapPath -classpath $realPath -p net.minecraft.entity.LivingEntity 2>&1 | Select-String -Pattern "canSee|isVisible|raycast|getVisibility" | Select-Object -First 20
+public boolean canSee(net.minecraft.entity.Entity);
+  public boolean canSee(net.minecraft.entity.Entity, net.minecraft.world.RaycastContext$ShapeType, net.minecraft.world.
+RaycastContext$FluidHandling, double);
 # Todos
-[•] Create PopkaMenuBackground shared gif helper class
-[ ] Create ScreenBackgroundMixin for gif background on 3 screens
-[ ] Create MenuButtonWidgetMixin for main-menu button style
-[ ] Register new mixins in popka.mixins.json
-[ ] Build project to verify compilation
-# Wrote src\main\java\fun\popka\visuals\ui\mainmenu\PopkaMenuBackground.java
-package fun.popka.visuals.ui.mainmenu;
+[•] ShaderEsp: добавить проверку видимости (canSee) в shouldOutline чтобы не рисовать через стены
+[ ] ShaderEsp: добавить проверку брони/предметов для игроков и невидимости
+[ ] ShaderEsp: сделать fill pass с depth test
+[ ] EntityESP: добавить проверку видимости для 2D тегов/брони
+[ ] EntityESP: добавить проверку брони/предметов для игроков
+[ ] EntityESP: не показывать никнейм для невидимых игроков
+[ ] Собрать проект и проверить компиляцию
+Начну с ShaderEsp.java. Сначала добавлю импорт ItemStack:
+← Edit src\main\java\fun\popka\visuals\modules\impl\render\ShaderEsp.java
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.ItemEntity;
+import net.minecraft.entity.decoration.EndCrystalEntity;
+import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.item.ItemStack;
+import org.lwjgl.opengl.GL11;
+import org.lwjgl.opengl.GL30;
+import fun.popka.api.events.EventLink;
+import fun.popka.api.events.Priority;
+Теперь модифицирую shouldOutline — добавлю проверку видимости, брони/предметов и невидимости:
+← Edit src\main\java\fun\popka\visuals\modules\impl\render\ShaderEsp.java
+    if (!entity.isAlive()) return false;
+    if (entity.isRemoved()) return false;
+    if (entity == mc.player && !targets.is("Себя")) return false;
+    if (entity.squaredDistanceTo(mc.player) > MAX_RANGE * MAX_RANGE) return false;
+    if (!mc.player.canSee(entity)) return false;
 
-import fun.popka.api.utils.render.RenderUtils;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.util.Identifier;
-
-public class PopkaMenuBackground {
-
-    private static final Identifier BACKGROUND_GIF = Identifier.of("popka", "textures/gui/fon.gif");
-    private static GifTexture backgroundTexture;
-    private static boolean initialized = false;
-
-    private PopkaMenuBackground() {
+    if (entity instanceof PlayerEntity) {
+        return targets.is("Игроки");
+    if (entity instanceof PlayerEntity player) {
+        if (!targets.is("Игроки")) return false;
+        if (player.isInvisible()) return false;
+        if (!hasAnyArmorOrItems(player)) return false;
+        return true;
     }
-
-    private static void init() {
-        if (initialized) return;
-        initialized = true;
-        try {
-            backgroundTexture = new GifTexture(BACKGROUND_GIF);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+    if (entity instanceof EndCrystalEntity) {
+        return targets.is("Кристаллы");
     }
-
-    public static void render(DrawContext context, int width, int height, float delta) {
-        if (!initialized) init();
-        if (backgroundTexture != null && backgroundTexture.isLoaded()) {
-            backgroundTexture.update(delta);
-            RenderUtils.drawImage(context.getMatrices(), backgroundTexture.getIdentifier(), 0, 0, width, height, 0xFFFFFFFF);
-        } else {
-            context.fill(0, 0, width, height, 0xFF000000);
-        }
     }
+    return false;
 }
 
-# Todos
-[✓] Create PopkaMenuBackground shared gif helper class
-[•] Create ScreenBackgroundMixin for gif background on 3 screens
-[•] Create MenuButtonWidgetMixin for main-menu button style
-[ ] Register new mixins in popka.mixins.json
-[ ] Build project to verify compilation
-# Wrote src\main\java\fun\popka\mixin\ScreenBackgroundMixin.java
-package fun.popka.mixin;
-
-import fun.popka.visuals.ui.mainmenu.PopkaMenuBackground;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.screen.multiplayer.MultiplayerScreen;
-import net.minecraft.client.gui.screen.option.OptionsScreen;
-import net.minecraft.client.gui.screen.world.SelectWorldScreen;
-import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-
-@Mixin(Screen.class)
-public abstract class ScreenBackgroundMixin {
-
-    @Inject(method = "renderBackground", at = @At("HEAD"), cancellable = true)
-    private void popka$renderBackground(DrawContext context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
-        Screen self = (Screen) (Object) this;
-        if (self instanceof MultiplayerScreen || self instanceof OptionsScreen || self instanceof SelectWorldScreen) {
-            PopkaMenuBackground.render(context, self.width, self.height, delta);
-            ci.cancel();
-        }
+private boolean hasAnyArmorOrItems(PlayerEntity player) {
+    if (!player.getMainHandStack().isEmpty()) return true;
+    if (!player.getOffHandStack().isEmpty()) return true;
+    for (ItemStack stack : player.getArmorItems()) {
+        if (!stack.isEmpty()) return true;
     }
+    return false;
 }
 
-# Wrote src\main\java\fun\popka\mixin\MenuButtonWidgetMixin.java
-package fun.popka.mixin;
-
-import fun.popka.api.utils.color.ColorUtils;
-import fun.popka.api.utils.render.RenderUtils;
-import fun.popka.api.utils.render.fonts.msdf.Font;
-import fun.popka.api.utils.render.fonts.msdf.Fonts;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.screen.multiplayer.MultiplayerScreen;
-import net.minecraft.client.gui.screen.option.OptionsScreen;
-import net.minecraft.client.gui.screen.world.SelectWorldScreen;
-import net.minecraft.client.gui.widget.ClickableWidget;
-import net.minecraft.client.gui.widget.PressableWidget;
-import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-
-@Mixin(PressableWidget.class)
-public abstract class MenuButtonWidgetMixin {
-
-    private static final int BG_COLOR = ColorUtils.rgb(0, 0, 0);
-    private static final int BG_HOVER_COLOR = ColorUtils.rgb(40, 40, 40);
-    private static final int TEXT_COLOR = ColorUtils.rgb(255, 255, 255);
-    private static final int TEXT_HOVER_COLOR = ColorUtils.rgb(255, 255, 255);
-    private static final float CORNER_RADIUS = 6f;
-    private static final int FONT_SIZE = 14;
-    private static final float VERTICAL_CENTER_OFFSET = 5f;
-
-    @Inject(method = "renderWidget", at = @At("HEAD"), cancellable = true)
-    private void popka$renderWidget(DrawContext context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
-        MinecraftClient mc = MinecraftClient.getInstance();
-        Screen current = mc.currentScreen;
-        if (!(current instanceof MultiplayerScreen)
-                && !(current instanceof OptionsScreen)
-                && !(current instanceof SelectWorldScreen)) {
-            return;
-        }
-
-        ClickableWidget self = (ClickableWidget) (Object) this;
-        int bgColor = self.isHovered() ? BG_HOVER_COLOR : BG_COLOR;
-        RenderUtils.drawRoundedRect(context.getMatrices(), self.getX(), self.getY(), self.getWidth(), self.getHeight(), CORNER_RADIUS, bgColor);
-
-        Font font = Fonts.getFont("suisse", FONT_SIZE);
-        String text = self.getMessage().getString();
-        int textColor = self.isHovered() ? TEXT_HOVER_COLOR : TEXT_COLOR;
-        float textX = self.getX() + self.getWidth() / 2f;
-        float textY = self.getY() + (self.getHeight() - FONT_SIZE) / 2f + VERTICAL_CENTER_OFFSET;
-        if (font != null) {
-            font.drawCenteredString(context.getMatrices(), text, textX, textY, textColor);
-        }
-
-        ci.cancel();
+private boolean hasOutlineTargets() {
+    if (mc.world == null || mc.player == null) {
+        return false;
     }
-}
-
-Now register the mixins in the config:
-← Edit src\main\resources\popka.mixins.json
-  "DrawContextNameProtectMixin",
-  "ClientPlayNetworkHandlerMixin",
-  "WorldRendererAccessor",
-  "HeldItemRendererHmiMixin",
-  "IMinecraftClientAccessor"
-  "IMinecraftClientAccessor",
-  "ScreenBackgroundMixin",
-  "MenuButtonWidgetMixin"
-],
-"injectors": {
-  "defaultRequire": 1
-},
-# Todos
-[✓] Create PopkaMenuBackground shared gif helper class
-[✓] Create ScreenBackgroundMixin for gif background on 3 screens
-[✓] Create MenuButtonWidgetMixin for main-menu button style
-[✓] Register new mixins in popka.mixins.json
-[•] Build project to verify compilation
-Now let me build the project to verify everything compiles:
-$ .\gradlew.bat build -x test 2>&1 | Select-Object -Last 60
-> Configure project :
-Fabric Loom: 1.15.5
-
-> Task :compileJava
-> Task :processResources
-> Task :classes
-> Task :jar
-> Task :processIncludeJars UP-TO-DATE
-> Task :sourcesJar
-> Task :validateAccessWidener UP-TO-DATE
-…
-Click to expand
-+ Thought: 141ms
-Build succeeded. Let me verify the final mixins config:
-→Read src\main\resources\popka.mixins.json [limit=12, offset=44]
-# Todos
-[✓] Create PopkaMenuBackground shared gif helper class
-[✓] Create ScreenBackgroundMixin for gif background on 3 screens
-[✓] Create MenuButtonWidgetMixin for main-menu button style
-[✓] Register new mixins in popka.mixins.json
-[✓] Build project to verify compilation
-Готово. Сборка прошла успешно. Я доделал задачу из прошлого чата.
-Что сделал:
-- PopkaMenuBackground — общий хелпер гиф-фона (fon.gif), загружается один раз и переиспользуется.
-- ScreenBackgroundMixin — перехватывает Screen.renderBackground и рисует гифку на фоне для MultiplayerScreen (серверы), SelectWorldScreen (локалка) и OptionsScreen (настройки).
-- MenuButtonWidgetMixin — перехватывает PressableWidget.renderWidget и рисует кнопки в стиле главного меню (чёрный скруглённый прямоугольник + шрифт suisse). Слайдеры не затрагиваются — SliderWidget наследуется от ClickableWidget, а не PressableWidget.
-- Оба миксина зарегистрированы в popka.mixins.json.
-Главное меню не трогал — оно уже работает со своими кнопками и гифкой.

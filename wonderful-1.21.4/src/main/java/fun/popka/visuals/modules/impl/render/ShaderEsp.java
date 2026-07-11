@@ -15,6 +15,7 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.ItemEntity;
 import net.minecraft.entity.decoration.EndCrystalEntity;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.item.ItemStack;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL30;
 import fun.popka.api.events.EventLink;
@@ -155,7 +156,7 @@ public class ShaderEsp extends Module {
                 setUniform(fillShader, "color", ColorUtils.redf(color), ColorUtils.greenf(color), ColorUtils.bluef(color));
                 setUniform(fillShader, "alpha", FILL_ALPHA);
                 setUniform(fillShader, "time", (System.currentTimeMillis() % 100000L) / 1000.0f);
-                drawFullscreenQuad();
+                drawFullscreenQuadWithDepthTest(mainBuffer, outlineBuffer);
             }
         }
 
@@ -295,15 +296,27 @@ public class ShaderEsp extends Module {
         if (entity.isRemoved()) return false;
         if (entity == mc.player && !targets.is("Себя")) return false;
         if (entity.squaredDistanceTo(mc.player) > MAX_RANGE * MAX_RANGE) return false;
+        if (!mc.player.canSee(entity)) return false;
 
-        if (entity instanceof PlayerEntity) {
-            return targets.is("Игроки");
+        if (entity instanceof PlayerEntity player) {
+            if (!targets.is("Игроки")) return false;
+            if (player.isInvisible() && !hasAnyArmorOrItems(player)) return false;
+            return true;
         }
         if (entity instanceof EndCrystalEntity) {
             return targets.is("Кристаллы");
         }
         if (entity instanceof ItemEntity) {
             return targets.is("Предметы");
+        }
+        return false;
+    }
+
+    private boolean hasAnyArmorOrItems(PlayerEntity player) {
+        if (!player.getMainHandStack().isEmpty()) return true;
+        if (!player.getOffHandStack().isEmpty()) return true;
+        for (ItemStack stack : player.getArmorItems()) {
+            if (!stack.isEmpty()) return true;
         }
         return false;
     }

@@ -1,19 +1,24 @@
 package fun.popka.mixin;
 
+import net.minecraft.client.gl.Framebuffer;
 import net.minecraft.client.option.CloudRenderMode;
 import net.minecraft.client.render.Camera;
+import net.minecraft.client.render.DefaultFramebufferSet;
 import net.minecraft.client.render.Fog;
 import net.minecraft.client.render.FrameGraphBuilder;
 import net.minecraft.client.render.GameRenderer;
+import net.minecraft.client.render.RenderPass;
 import net.minecraft.client.render.RenderTickCounter;
 import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.WorldRenderer;
+import net.minecraft.client.util.Handle;
 import net.minecraft.client.util.ObjectAllocator;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.profiler.Profilers;
 import org.joml.Matrix4f;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -21,12 +26,17 @@ import fun.popka.api.QClient;
 import fun.popka.api.events.EventInvoker;
 import fun.popka.api.events.implement.Event3DRender;
 import fun.popka.api.storages.implement.helpertstorages.enumvar.ModuleClass;
+import fun.popka.api.utils.render.sky.ShaderSkyRenderer;
 import fun.popka.visuals.modules.impl.render.Removals;
 import fun.popka.visuals.modules.impl.render.ShaderEsp;
+import fun.popka.visuals.modules.impl.render.ShaderSky;
 import fun.popka.visuals.modules.impl.render.Sonar;
 
 @Mixin(WorldRenderer.class)
 public class WorldRendererMixin implements QClient {
+
+    @Shadow
+    private DefaultFramebufferSet framebufferSet;
 
     @Inject(method = "renderParticles", at = @At("HEAD"), cancellable = true)
     private void Popka$renderParticles(FrameGraphBuilder frameGraphBuilder, Camera camera, float tickDelta, Fog fog, CallbackInfo ci) {
@@ -76,6 +86,17 @@ public class WorldRendererMixin implements QClient {
         if (removals != null && removals.isEnabled("Блок-сущности")) {
             ci.cancel();
         }
+    }
+
+    @Inject(method = "renderSky", at = @At("RETURN"))
+    private void Popka$renderSky(FrameGraphBuilder frameGraphBuilder, Camera camera, float tickDelta, Fog fog, CallbackInfo ci) {
+        ShaderSky shaderSky = ModuleClass.INSTANCE != null ? ModuleClass.INSTANCE.shaderSky : null;
+        if (shaderSky == null || !shaderSky.isEnable()) return;
+
+        RenderPass pass = frameGraphBuilder.createPass("popka_shader_sky");
+        Handle<Framebuffer> mainHandle = this.framebufferSet.mainFramebuffer;
+        this.framebufferSet.mainFramebuffer = pass.transfer(mainHandle);
+        pass.setRenderer(() -> ShaderSkyRenderer.getInstance().renderSky());
     }
 
     @Inject(method = "render", at = @At("RETURN"))

@@ -250,7 +250,7 @@ public class EntityESP extends Module {
                 ScreenRect rect = projectBox(interpolatedBox);
                 if (rect == null) continue;
 
-                if (tagsEnabled && font != null) {
+                if (tagsEnabled && font != null && !isPlayerInvisible(player)) {
                     drawTag(event, player, rect, font);
                 }
                 if (armorEnabled) {
@@ -874,6 +874,9 @@ public class EntityESP extends Module {
         if (entity instanceof PlayerEntity player) {
             return shouldProcessPlayer(player, false);
         }
+        if (mc.player != null && !mc.player.canSee(entity)) {
+            return false;
+        }
         if (entity instanceof ItemEntity itemEntity) {
             return targetItems.isState() && itemEntity.isAlive();
         }
@@ -897,7 +900,8 @@ public class EntityESP extends Module {
     }
 
     private boolean shouldProcessItem2D(ItemEntity itemEntity) {
-        return targetItems.isState() && itemEntity.isAlive();
+        if (!targetItems.isState() || !itemEntity.isAlive()) return false;
+        return mc.player == null || mc.player.canSee(itemEntity);
     }
 
     private boolean shouldProcessPlayer(PlayerEntity player, boolean skipInvisible) {
@@ -910,7 +914,10 @@ public class EntityESP extends Module {
         if (player == mc.player && isInFirstPerson()) {
             return false;
         }
-        if (skipInvisible && player.isInvisible() && !canRenderInvisiblePlayer(player)) {
+        if (mc.player != null && player != mc.player && !mc.player.canSee(player)) {
+            return false;
+        }
+        if (player.isInvisible() && !hasAnyArmorOrItems(player) && !canRenderInvisiblePlayer(player)) {
             return false;
         }
         return true;
@@ -933,6 +940,20 @@ public class EntityESP extends Module {
     private boolean canRenderInvisiblePlayer(PlayerEntity player) {
         SeeInvisibles seeInvisibles = ModuleClass.seeInvisibles;
         return seeInvisibles != null && seeInvisibles.shouldRenderInvisible(player);
+    }
+
+    private boolean isPlayerInvisible(PlayerEntity player) {
+        if (!player.isInvisible()) return false;
+        return !canRenderInvisiblePlayer(player);
+    }
+
+    private boolean hasAnyArmorOrItems(PlayerEntity player) {
+        if (!player.getMainHandStack().isEmpty()) return true;
+        if (!player.getOffHandStack().isEmpty()) return true;
+        for (ItemStack stack : player.getArmorItems()) {
+            if (!stack.isEmpty()) return true;
+        }
+        return false;
     }
 
     private boolean isOutsideRenderDistance(Entity entity) {
