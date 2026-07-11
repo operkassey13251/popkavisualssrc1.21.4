@@ -31,6 +31,7 @@ public class InitializeStorage implements QClient {
         Popka.INSTANCE.staffStorage = new StaffStorage();
         Popka.INSTANCE.waypointStorage = new WaypointStorage();
         Popka.INSTANCE.commandStorage = new CommandStorage();
+        Popka.INSTANCE.accountChangerStorage = new AccountChangerStorage();
         Popka.INSTANCE.configStorage = new ConfigStorage();
     }
 }

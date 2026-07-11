@@ -33,7 +33,7 @@ public class PopkaTitleScreen extends Screen {
         int buttonWidth = 200;
         int buttonHeight = 24;
         int buttonSpacing = 6;
-        int totalButtons = 4;
+        int totalButtons = 5;
         int totalHeight = totalButtons * buttonHeight + (totalButtons - 1) * buttonSpacing;
         int titleOffset = 40;
         int startY = (this.height - totalHeight) / 2 + titleOffset;
@@ -42,7 +42,8 @@ public class PopkaTitleScreen extends Screen {
         addButton(centerX, startY, buttonWidth, buttonHeight, Text.translatable("menu.singleplayer"), b -> this.client.setScreen(new SelectWorldScreen(this)));
         addButton(centerX, startY + buttonHeight + buttonSpacing, buttonWidth, buttonHeight, Text.translatable("menu.multiplayer"), b -> this.client.setScreen(new MultiplayerScreen(this)));
         addButton(centerX, startY + 2 * (buttonHeight + buttonSpacing), buttonWidth, buttonHeight, Text.translatable("menu.options"), b -> this.client.setScreen(new OptionsScreen(this, this.client.options)));
-        addButton(centerX, startY + 3 * (buttonHeight + buttonSpacing), buttonWidth, buttonHeight, Text.translatable("menu.quit"), b -> this.client.scheduleStop());
+        addButton(centerX, startY + 3 * (buttonHeight + buttonSpacing), buttonWidth, buttonHeight, Text.literal("Account Changer"), b -> this.client.setScreen(new AccountChangerScreen(this)));
+        addButton(centerX, startY + 4 * (buttonHeight + buttonSpacing), buttonWidth, buttonHeight, Text.translatable("menu.quit"), b -> this.client.scheduleStop());
 
         for (ButtonSpec spec : buttonSpecs) {
             PopkaMainMenuButton button = new PopkaMainMenuButton(spec.x, spec.y, spec.width, spec.height, spec.text, spec.onPress);
