@@ -73,6 +73,7 @@ public interface ModuleRewords {
     SeeInvisibles seeInvisibles = SeeInvisibles.INSTANCE;
     ShaderEsp shaderEsp = ShaderEsp.INSTANCE;
     ShaderHands shaderHands = ShaderHands.INSTANCE;
+    ShaderSky shaderSky = ShaderSky.INSTANCE;
     Satellite sattelite = Satellite.INSTANCE;
     ShulkerPreview shulkerPreview = ShulkerPreview.INSTANCE;
     Sonar sonar = Sonar.INSTANCE;

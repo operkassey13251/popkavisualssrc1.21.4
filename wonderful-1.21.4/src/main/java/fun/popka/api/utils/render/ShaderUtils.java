@@ -35,6 +35,7 @@ public class ShaderUtils implements QClient {
     public final ShaderProgramKey shaderHandsKawaseUp = register("hands", "hands_kawase_up", VertexFormats.POSITION_TEXTURE_COLOR);
     public final ShaderProgramKey shaderEspGlow = register("shaderesp", "glow", VertexFormats.POSITION_TEXTURE_COLOR);
     public final ShaderProgramKey shaderEspFill = register("shaderesp", "fill", VertexFormats.POSITION_TEXTURE_COLOR);
+    public final ShaderProgramKey shaderSkyMask = register("sky", "sky_mask", VertexFormats.POSITION_TEXTURE_COLOR);
 
     private ShaderProgramKey register(String shaderNamePackage, String shaderName, VertexFormat vertexFormat) {
         return new ShaderProgramKey(Identifier.of("popka", "core/" + shaderNamePackage + "/" + shaderName), vertexFormat, Defines.EMPTY);
