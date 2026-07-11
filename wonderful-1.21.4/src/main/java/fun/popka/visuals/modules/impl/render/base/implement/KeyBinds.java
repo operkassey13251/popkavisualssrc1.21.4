@@ -120,9 +120,16 @@ public class KeyBinds extends InterfaceProcessing {
         float rightEdge = baseX + 60;
         float x = rightEdge - width;
 
-        RenderUtils.drawDefaultHudElementRects(eventRender.getContext().getMatrices(), x, y, width, height, colorTheme, isUnusualRectType());
-        issue(14).draw(eventRender.getContext().getMatrices(), "Binds", x + 5, y + 6f, -1);
-        icon(13).draw(eventRender.getContext().getMatrices(), "f", rightEdge - 13f, y + 7.5f, colorTheme);
+        MatrixStack matrices = eventRender.getContext().getMatrices();
+        if (isUnusualRectType()) {
+            RenderUtils.drawLiquidGlassPanel(matrices, x, y, width, height, 3.0f, 3.5f, colorTheme);
+            RenderUtils.drawHudSquarePattern(matrices, x, y, width, height, colorTheme);
+            RenderUtils.drawRoundedRect(matrices, x + width - 14.5f, y + 3.0f, 10.0f, 10.0f, 2.0f, ColorUtils.darken(colorTheme, 0.4f));
+        } else {
+            RenderUtils.drawDefaultHudElementRects(matrices, x, y, width, height, colorTheme, false);
+        }
+        issue(14).draw(matrices, "Binds", x + 5, y + 6f, -1);
+        icon(13).draw(matrices, "f", rightEdge - 13f, y + 7.5f, colorTheme);
 
         float offsetY = 18;
         for (Module module : ModuleClass.INSTANCE.getObject()) {

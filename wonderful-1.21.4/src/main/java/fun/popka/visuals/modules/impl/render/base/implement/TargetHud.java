@@ -100,23 +100,6 @@ public class TargetHud extends InterfaceProcessing {
         this.healthBarStyleEnabled = healthBarStyleEnabled;
     }
 
-    private int interpolateColor(int color1, int color2, float ratio) {
-        ratio = MathHelper.clamp(ratio, 0.0f, 1.0f);
-        int r1 = (color1 >> 16) & 0xFF;
-        int g1 = (color1 >> 8) & 0xFF;
-        int b1 = color1 & 0xFF;
-        int a1 = (color1 >> 24) & 0xFF;
-        int r2 = (color2 >> 16) & 0xFF;
-        int g2 = (color2 >> 8) & 0xFF;
-        int b2 = color2 & 0xFF;
-        int a2 = (color2 >> 24) & 0xFF;
-        int r = (int)(r1 + (r2 - r1) * ratio);
-        int g = (int)(g1 + (g2 - g1) * ratio);
-        int b = (int)(b1 + (b2 - b1) * ratio);
-        int a = (int)(a1 + (a2 - a1) * ratio);
-        return (a << 24) | (r << 16) | (g << 8) | b;
-    }
-
     private void ensureBurnBuffer() {
         if (mc == null || mc.getWindow() == null) {
             return;
@@ -397,13 +380,40 @@ public class TargetHud extends InterfaceProcessing {
         float headSize = 27.5f;
         float gap = 5.0f;
         float rightPad = 6.0f;
-        float textX = x + padding + headSize + gap - 5;
-        float textWidth = Math.max(issue(13).getWidth(name), issue(12).getWidth(hpText));
-        float width = Math.max(92.5f, padding + headSize + gap + textWidth + rightPad) - 3.5f;
         float height = 32.0f;
-        float headX = x + padding;
-        float headY = y + 3.5f;
-        float textMaxWidth = Math.max(10.0f, width - (textX - x) - rightPad) + 2;
+
+        float width;
+        float headX;
+        float headY;
+        float textX;
+        float textMaxWidth;
+        float circleDiameter = 0f;
+        float circleBoxX = 0f;
+        float circleCenterX = 0f;
+        float circleCenterY = 0f;
+
+        if (healthBarStyleEnabled) {
+            circleDiameter = 26.0f;
+            float nameWidth = issue(14).getWidth(name);
+            float textWidth = nameWidth;
+            width = Math.max(108.0f, padding + headSize + gap + textWidth + gap + circleDiameter + rightPad);
+            headX = x + padding;
+            headY = y + (height - headSize) / 2.0f;
+            circleBoxX = x + width - rightPad - circleDiameter;
+            circleCenterX = circleBoxX + circleDiameter / 2.0f;
+            circleCenterY = y + height / 2.0f;
+            float textAreaStart = headX + headSize + gap;
+            float textAreaEnd = circleBoxX - gap;
+            textX = (textAreaStart + textAreaEnd) / 2.0f;
+            textMaxWidth = Math.max(10.0f, textAreaEnd - textAreaStart);
+        } else {
+            textX = x + padding + headSize + gap - 5;
+            float textWidth = Math.max(issue(13).getWidth(name), issue(12).getWidth(hpText));
+            width = Math.max(92.5f, padding + headSize + gap + textWidth + rightPad) - 3.5f;
+            headX = x + padding;
+            headY = y + 3.5f;
+            textMaxWidth = Math.max(10.0f, width - (textX - x) - rightPad) + 2;
+        }
 
         MatrixStack matrices = eventRender.getContext().getMatrices();
         float drawAlpha = alpha;
@@ -413,12 +423,16 @@ public class TargetHud extends InterfaceProcessing {
 
         matrices.push();
 
-        RenderUtils.drawDefaultHudPanel(matrices, x, y, width, height, 4, 4.5f,
-                ColorUtils.applyAlpha(ColorUtils.rgba(50, 50, 50, 255), drawAlpha),
-                ColorUtils.applyAlpha(ColorUtils.darken(colorTheme, 0.15f), drawAlpha),
-                ColorUtils.applyAlpha(ColorUtils.darken(colorTheme, 0.05f), drawAlpha));
-        if (drawSquares && drawAlpha > 0.06f) {
-            RenderUtils.drawHudSquarePattern(matrices, x + 8, y, width, height, ColorUtils.applyAlpha(barThemeColor, drawAlpha));
+        if (drawSquares) {
+            RenderUtils.drawLiquidGlassPanel(matrices, x, y, width, height, 4, 4.5f, barThemeColor, drawAlpha);
+            if (drawAlpha > 0.06f) {
+                RenderUtils.drawHudSquarePattern(matrices, x + 8, y, width, height, ColorUtils.applyAlpha(barThemeColor, drawAlpha));
+            }
+        } else {
+            RenderUtils.drawDefaultHudPanel(matrices, x, y, width, height, 4, 4.5f,
+                    ColorUtils.applyAlpha(ColorUtils.rgba(50, 50, 50, 255), drawAlpha),
+                    ColorUtils.applyAlpha(ColorUtils.darken(colorTheme, 0.15f), drawAlpha),
+                    ColorUtils.applyAlpha(ColorUtils.darken(colorTheme, 0.05f), drawAlpha));
         }
 
         if (headParticlesEnabled) {
@@ -429,104 +443,96 @@ public class TargetHud extends InterfaceProcessing {
 
         if (target instanceof PlayerEntity playerEntity) {
             RenderUtils.drawPlayerHead(matrices, playerEntity.getUuid(), headX - 1.85f, headY - 1, headSize, 3.5f, drawAlpha, 0.0f);
+        } else if (healthBarStyleEnabled) {
+            float phX = headX - 1.85f;
+            float phY = headY - 1;
+            RenderUtils.drawRoundedRect(matrices, phX, phY, headSize, headSize, 3.5f,
+                    ColorUtils.applyAlpha(ColorUtils.rgba(21, 21, 21, 255), drawAlpha));
+            issue(26).drawCenteredString(matrices, "?", phX + headSize / 2.0f, phY + headSize / 2.0f - 6.5f,
+                    ColorUtils.rgba(220, 220, 220, drawAlphaInt));
         } else {
             RenderUtils.drawTargetHudDefaultPlaceholder(matrices, headX - 1.85f, headY - 1, drawAlpha);
             issue(26).drawCenteredString(matrices, "?", headX + headSize / 2.25f, headY + 7.5,
                     ColorUtils.rgba(220, 220, 220, drawAlphaInt));
         }
 
-        issue(14).drawStringWithFade(matrices, name, textX + 0.7f, y + 5.5f, textMaxWidth, ColorUtils.rgba(255, 255, 255, drawAlphaInt));
-
-        issue(13).drawStringWithFade(matrices, hpText, textX + 1, y + 14.5f, textMaxWidth, ColorUtils.rgba(232, 232, 232, drawAlphaInt));
-
-        if (goldenAlpha > 0.01f) {
-            float hpTextWidth = issue(13).getWidth(hpText);
-            float abTextX = textX + 1 + hpTextWidth;
-            int goldenAlphaInt = (int) (255.0f * goldenAlpha * alpha);
-            issue(13).drawGradientStringHorizontal(matrices, abText, abTextX, y + 14.5f, ColorUtils.rgba(236, 183, 39, goldenAlphaInt), ColorUtils.rgba(147, 108, 16, goldenAlphaInt));
-        }
-
-        float barX = textX;
-        float barY = y + height - 10.45f;
-        float barW = Math.max(19.0f, width - rightPad - (barX - x));
-        float barH = 3.85f;
-
-        float hpRatio = healthProgress;
-
-        int barBgLeft;
-        int barBgRight;
-        int barTrailLeft;
-        int barTrailRight;
-        int barFillLeft;
-        int barFillRight;
-
         if (healthBarStyleEnabled) {
-            int redDarkBg = ColorUtils.rgba(70, 5, 10, (int)(115.0f * hpBarAlpha));
-            int greenDarkBg = ColorUtils.rgba(0, 70, 0, (int)(115.0f * hpBarAlpha));
-            int redBrightBg = ColorUtils.rgba(155, 5, 15, (int)(115.0f * hpBarAlpha));
-            int greenBrightBg = ColorUtils.rgba(55, 205, 15, (int)(115.0f * hpBarAlpha));
-            barBgLeft = interpolateColor(redDarkBg, greenDarkBg, hpRatio);
-            barBgRight = interpolateColor(redBrightBg, greenBrightBg, hpRatio);
+            issue(14).drawCenteredString(matrices, name, textX, y + height / 2.0f - 3.5f, ColorUtils.rgba(255, 255, 255, drawAlphaInt));
 
-            int redDarkTrail = ColorUtils.rgba(70, 5, 10, (int)(200.0f * hpBarAlpha));
-            int greenDarkTrail = ColorUtils.rgba(0, 70, 0, (int)(200.0f * hpBarAlpha));
-            int redBrightTrail = ColorUtils.rgba(155, 5, 15, (int)(200.0f * hpBarAlpha));
-            int greenBrightTrail = ColorUtils.rgba(55, 205, 15, (int)(200.0f * hpBarAlpha));
-            barTrailLeft = interpolateColor(redDarkTrail, greenDarkTrail, hpRatio);
-            barTrailRight = interpolateColor(redBrightTrail, greenBrightTrail, hpRatio);
+            float circleThickness = 2.2f;
+            int circleColor = ColorUtils.applyAlpha(barThemeColor, drawAlpha);
+            int circleBgColor = ColorUtils.applyAlpha(ColorUtils.darken(barThemeColor2, 0.72f), drawAlpha * 0.26f);
+            float circleBoxY = circleCenterY - circleDiameter / 2.0f;
+            RenderUtils.drawRingArc(matrices, circleBoxX, circleBoxY, circleDiameter, circleThickness, -90.0f, 270.0f, circleBgColor);
+            if (hpProgressAnimated > 0.0f) {
+                float healthEndAngle = -90.0f + 360.0f * hpProgressAnimated;
+                RenderUtils.drawRingArc(matrices, circleBoxX, circleBoxY, circleDiameter, circleThickness, -90.0f, healthEndAngle, circleColor);
+            }
 
-            int redDarkFill = ColorUtils.rgba(70, 5, 10, (int)(250.0f * hpBarAlpha));
-            int greenDarkFill = ColorUtils.rgba(0, 70, 0, (int)(250.0f * hpBarAlpha));
-            int redBrightFill = ColorUtils.rgba(155, 5, 15, (int)(250.0f * hpBarAlpha));
-            int greenBrightFill = ColorUtils.rgba(55, 205, 15, (int)(250.0f * hpBarAlpha));
-            barFillLeft = interpolateColor(redDarkFill, greenDarkFill, hpRatio);
-            barFillRight = interpolateColor(redBrightFill, greenBrightFill, hpRatio);
+            String healthNum = String.format("%.0f", animatedHealthValue);
+            issue(15).drawCenteredString(matrices, healthNum, circleCenterX, circleCenterY - 3.5f, ColorUtils.rgba(255, 255, 255, drawAlphaInt));
         } else {
-            barBgLeft = ColorUtils.applyAlpha(ColorUtils.darken(barThemeColor2, 0.72f), hpBarAlpha * 0.26f);
-            barBgRight = ColorUtils.applyAlpha(ColorUtils.darken(barThemeColor, 0.72f), hpBarAlpha * 0.26f);
-            barTrailLeft = ColorUtils.applyAlpha(ColorUtils.darken(barThemeColor2, 0.9f), hpBarAlpha * 0.42f);
-            barTrailRight = ColorUtils.applyAlpha(ColorUtils.darken(barThemeColor, 0.9f), hpBarAlpha * 0.42f);
-            barFillLeft = ColorUtils.applyAlpha(barThemeColor2, hpBarAlpha);
-            barFillRight = ColorUtils.applyAlpha(barThemeColor, hpBarAlpha);
-        }
+            issue(14).drawStringWithFade(matrices, name, textX + 0.7f, y + 5.5f, textMaxWidth, ColorUtils.rgba(255, 255, 255, drawAlphaInt));
 
-        if (hpBarAlpha > 0.025f) {
-            RenderUtils.drawGradientRect(matrices, barX, barY, barW + 3, barH + 4.25f, 1.95f, barBgLeft, barBgRight, true);
-
-            if (!hidingHud) {
-                float trailProgressDraw = MathHelper.lerp(0.58f, hpTrailProgressAnimated, hpProgressAnimated);
-                float trailW = barW * trailProgressDraw;
-                if (trailW > 1.15f) {
-                    RenderUtils.drawGradientRect(matrices, barX, barY, trailW + 3, barH + 4.25f, 1.95f, barTrailLeft, barTrailRight, true);
-                }
-            }
-
-            float filledW = barW * hpProgressAnimated;
-            if (filledW > 1.15f) {
-                RenderUtils.drawGradientRect(matrices, barX, barY, filledW + 3, barH + 4.25f, 1.95f, barFillLeft, barFillRight, true);
-            }
+            issue(13).drawStringWithFade(matrices, hpText, textX + 1, y + 14.5f, textMaxWidth, ColorUtils.rgba(232, 232, 232, drawAlphaInt));
 
             if (goldenAlpha > 0.01f) {
-                float goldenBarAlpha = goldenAlpha * hpBarAlpha;
+                float hpTextWidth = issue(13).getWidth(hpText);
+                float abTextX = textX + 1 + hpTextWidth;
+                int goldenAlphaInt = (int) (255.0f * goldenAlpha * alpha);
+                issue(13).drawGradientStringHorizontal(matrices, abText, abTextX, y + 14.5f, ColorUtils.rgba(236, 183, 39, goldenAlphaInt), ColorUtils.rgba(147, 108, 16, goldenAlphaInt));
+            }
 
-                int goldenBaseLeft = ColorUtils.rgba(147, 108, 16, 255);
-                int goldenBaseRight = ColorUtils.rgba(236, 183, 39, 255);
-                int goldenTrailLeft = ColorUtils.applyAlpha(ColorUtils.darken(goldenBaseLeft, 0.7f), goldenBarAlpha * 0.5f);
-                int goldenTrailRight = ColorUtils.applyAlpha(ColorUtils.darken(goldenBaseRight, 0.7f), goldenBarAlpha * 0.5f);
-                int goldenFillLeft = ColorUtils.applyAlpha(ColorUtils.darken(goldenBaseLeft, 0.7f), goldenBarAlpha);
-                int goldenFillRight = ColorUtils.applyAlpha(goldenBaseRight, goldenBarAlpha);
+            float barX = textX;
+            float barY = y + height - 10.45f;
+            float barW = Math.max(19.0f, width - rightPad - (barX - x));
+            float barH = 3.85f;
 
-                if (!hidingHud && hasAbsorption) {
-                    float goldenTrailProgressDraw = MathHelper.lerp(0.58f, goldenTrailProgressAnimated, goldenProgressAnimated);
-                    float goldenTrailW = barW * goldenTrailProgressDraw;
-                    if (goldenTrailW > 1.15f) {
-                        RenderUtils.drawGradientRect(matrices, barX, barY, goldenTrailW + 3, barH + 4.25f, 1.95f, goldenTrailLeft, goldenTrailRight, true);
+            int barBgLeft = ColorUtils.applyAlpha(ColorUtils.darken(barThemeColor2, 0.72f), hpBarAlpha * 0.26f);
+            int barBgRight = ColorUtils.applyAlpha(ColorUtils.darken(barThemeColor, 0.72f), hpBarAlpha * 0.26f);
+            int barTrailLeft = ColorUtils.applyAlpha(ColorUtils.darken(barThemeColor2, 0.9f), hpBarAlpha * 0.42f);
+            int barTrailRight = ColorUtils.applyAlpha(ColorUtils.darken(barThemeColor, 0.9f), hpBarAlpha * 0.42f);
+            int barFillLeft = ColorUtils.applyAlpha(barThemeColor2, hpBarAlpha);
+            int barFillRight = ColorUtils.applyAlpha(barThemeColor, hpBarAlpha);
+
+            if (hpBarAlpha > 0.025f) {
+                RenderUtils.drawGradientRect(matrices, barX, barY, barW + 3, barH + 4.25f, 1.95f, barBgLeft, barBgRight, true);
+
+                if (!hidingHud) {
+                    float trailProgressDraw = MathHelper.lerp(0.58f, hpTrailProgressAnimated, hpProgressAnimated);
+                    float trailW = barW * trailProgressDraw;
+                    if (trailW > 1.15f) {
+                        RenderUtils.drawGradientRect(matrices, barX, barY, trailW + 3, barH + 4.25f, 1.95f, barTrailLeft, barTrailRight, true);
                     }
                 }
 
-                float goldenFilledW = barW * goldenProgressAnimated;
-                if (goldenFilledW > 1.15f) {
-                    RenderUtils.drawGradientRect(matrices, barX, barY, goldenFilledW + 3, barH + 4.25f, 1.95f, goldenFillLeft, goldenFillRight, true);
+                float filledW = barW * hpProgressAnimated;
+                if (filledW > 1.15f) {
+                    RenderUtils.drawGradientRect(matrices, barX, barY, filledW + 3, barH + 4.25f, 1.95f, barFillLeft, barFillRight, true);
+                }
+
+                if (goldenAlpha > 0.01f) {
+                    float goldenBarAlpha = goldenAlpha * hpBarAlpha;
+
+                    int goldenBaseLeft = ColorUtils.rgba(147, 108, 16, 255);
+                    int goldenBaseRight = ColorUtils.rgba(236, 183, 39, 255);
+                    int goldenTrailLeft = ColorUtils.applyAlpha(ColorUtils.darken(goldenBaseLeft, 0.7f), goldenBarAlpha * 0.5f);
+                    int goldenTrailRight = ColorUtils.applyAlpha(ColorUtils.darken(goldenBaseRight, 0.7f), goldenBarAlpha * 0.5f);
+                    int goldenFillLeft = ColorUtils.applyAlpha(ColorUtils.darken(goldenBaseLeft, 0.7f), goldenBarAlpha);
+                    int goldenFillRight = ColorUtils.applyAlpha(goldenBaseRight, goldenBarAlpha);
+
+                    if (!hidingHud && hasAbsorption) {
+                        float goldenTrailProgressDraw = MathHelper.lerp(0.58f, goldenTrailProgressAnimated, goldenProgressAnimated);
+                        float goldenTrailW = barW * goldenTrailProgressDraw;
+                        if (goldenTrailW > 1.15f) {
+                            RenderUtils.drawGradientRect(matrices, barX, barY, goldenTrailW + 3, barH + 4.25f, 1.95f, goldenTrailLeft, goldenTrailRight, true);
+                        }
+                    }
+
+                    float goldenFilledW = barW * goldenProgressAnimated;
+                    if (goldenFilledW > 1.15f) {
+                        RenderUtils.drawGradientRect(matrices, barX, barY, goldenFilledW + 3, barH + 4.25f, 1.95f, goldenFillLeft, goldenFillRight, true);
+                    }
                 }
             }
         }
