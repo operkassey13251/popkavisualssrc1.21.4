@@ -4,15 +4,19 @@ import fun.popka.api.utils.color.ColorUtils;
 import fun.popka.api.utils.render.RenderUtils;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.widget.ClickableWidget;
 import net.minecraft.client.gui.widget.TextFieldWidget;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(TextFieldWidget.class)
 public abstract class MenuTextFieldWidgetMixin {
+
+    @Shadow
+    private boolean drawsBackground;
 
     private static final int BG_COLOR = ColorUtils.rgba(0, 0, 0, 200);
     private static final int BG_FOCUSED_COLOR = ColorUtils.rgba(20, 20, 20, 220);
@@ -32,8 +36,8 @@ public abstract class MenuTextFieldWidgetMixin {
             return;
         }
 
-        if (self.drawsBackground()) {
-            self.setDrawsBackground(false);
+        if (!this.drawsBackground) {
+            this.drawsBackground = true;
         }
 
         int x = self.getX();
@@ -47,5 +51,18 @@ public abstract class MenuTextFieldWidgetMixin {
 
         RenderUtils.drawRoundedRect(context.getMatrices(), x, y, w, h, CORNER_RADIUS, borderColor);
         RenderUtils.drawRoundedRect(context.getMatrices(), x + 1, y + 1, w - 2, h - 2, CORNER_RADIUS - 1, bgColor);
+    }
+
+    @Redirect(
+            method = "renderWidget",
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/widget/TextFieldWidget;drawsBackground()Z", ordinal = 0),
+            require = 0
+    )
+    private boolean popka$redirectDrawsBackground(TextFieldWidget instance) {
+        MinecraftClient mc = MinecraftClient.getInstance();
+        if (mc != null && mc.world == null) {
+            return false;
+        }
+        return this.drawsBackground;
     }
 }

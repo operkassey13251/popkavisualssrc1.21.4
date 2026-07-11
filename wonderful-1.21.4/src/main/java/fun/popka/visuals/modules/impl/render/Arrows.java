@@ -69,6 +69,9 @@ public class Arrows extends Module {
             if (player == mc.player || !player.isAlive() || player.isSpectator() || isGhostPlayer(player)) {
                 continue;
             }
+            if (!mc.player.canSee(player)) {
+                continue;
+            }
 
             UUID uuid = player.getUuid();
             ArrowState state = states.computeIfAbsent(uuid, id -> new ArrowState());

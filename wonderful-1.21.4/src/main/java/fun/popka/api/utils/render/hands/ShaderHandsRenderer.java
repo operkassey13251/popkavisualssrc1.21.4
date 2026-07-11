@@ -11,6 +11,8 @@ import net.minecraft.client.render.Tessellator;
 import net.minecraft.client.render.VertexFormat;
 import net.minecraft.client.render.VertexFormats;
 import com.mojang.blaze3d.platform.GlStateManager;
+import net.minecraft.registry.tag.ItemTags;
+import net.minecraft.util.Arm;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL14;
 import org.lwjgl.opengl.GL30;
@@ -39,6 +41,13 @@ public class ShaderHandsRenderer implements QClient {
     private boolean pendingComposite;
     private int configuredBeforeDepthTex = -1;
     private int configuredAfterDepthTex = -1;
+
+    private static final int MAX_AFTERIMAGE_FRAMES = 6;
+    private final Framebuffer[] afterimageHistory = new Framebuffer[MAX_AFTERIMAGE_FRAMES];
+    private int afterimageWriteIndex = 0;
+    private int afterimageTickCounter = 0;
+    private int afterimageValidCount = 0;
+    private int afterimageDecayCounter = 0;
 
     public static ShaderHandsRenderer getInstance() {
         if (instance == null) instance = new ShaderHandsRenderer();
@@ -127,6 +136,12 @@ public class ShaderHandsRenderer implements QClient {
             return;
         }
 
+        if (module.mode.is("Новый")) {
+            renderAfterimageMode(module, color1, color2, glowValue, outlineValue);
+            invalidateState();
+            return;
+        }
+
         int blurredMaskTexture = 0;
         if (hasGlow) {
             int iterations = Math.max(3, Math.min(8, 4 + Math.round(outlineValue * 0.7f)));
@@ -185,6 +200,20 @@ public class ShaderHandsRenderer implements QClient {
         pendingComposite = false;
         configuredBeforeDepthTex = -1;
         configuredAfterDepthTex = -1;
+    }
+
+    public void clearAfterimageHistory() {
+        afterimageWriteIndex = 0;
+        afterimageTickCounter = 0;
+        afterimageValidCount = 0;
+        afterimageDecayCounter = 0;
+        for (int i = 0; i < MAX_AFTERIMAGE_FRAMES; i++) {
+            if (afterimageHistory[i] != null) {
+                afterimageHistory[i].setClearColor(0f, 0f, 0f, 0f);
+                afterimageHistory[i].clear();
+            }
+        }
+        mc.getFramebuffer().beginWrite(true);
     }
 
     private int runKawaseBloom(int iterations) {
@@ -263,7 +292,8 @@ public class ShaderHandsRenderer implements QClient {
     private void ensureBuffers() {
         int w = mc.getWindow().getFramebufferWidth();
         int h = mc.getWindow().getFramebufferHeight();
-        if (w == width && h == height && beforeBuffer != null && afterBuffer != null && maskBuffer != null) return;
+        if (w == width && h == height && beforeBuffer != null && afterBuffer != null && maskBuffer != null
+                && afterimageHistory[0] != null) return;
 
         if (beforeBuffer != null) beforeBuffer.delete();
         if (afterBuffer != null) afterBuffer.delete();
@@ -272,14 +302,27 @@ public class ShaderHandsRenderer implements QClient {
             fb.delete();
         }
         bloomBuffers.clear();
+        for (int i = 0; i < MAX_AFTERIMAGE_FRAMES; i++) {
+            if (afterimageHistory[i] != null) {
+                afterimageHistory[i].delete();
+                afterimageHistory[i] = null;
+            }
+        }
 
         beforeBuffer = new SimpleFramebuffer(w, h, true);
         afterBuffer = new SimpleFramebuffer(w, h, true);
         maskBuffer = new SimpleFramebuffer(w, h, true);
+        for (int i = 0; i < MAX_AFTERIMAGE_FRAMES; i++) {
+            afterimageHistory[i] = new SimpleFramebuffer(w, h, false);
+        }
         width = w;
         height = h;
         configuredBeforeDepthTex = -1;
         configuredAfterDepthTex = -1;
+        afterimageWriteIndex = 0;
+        afterimageTickCounter = 0;
+        afterimageValidCount = 0;
+        afterimageDecayCounter = 0;
     }
 
     private void ensureBloomBuffers(int iterations) {
@@ -355,6 +398,138 @@ public class ShaderHandsRenderer implements QClient {
         restoreCompositeState();
     }
 
+    private void renderAfterimageMode(ShaderHands module, int color1, int color2, float glowValue, float outlineValue) {
+        ShaderProgram afterimageShader = mc.getShaderLoader().getOrCreateProgram(ShaderUtils.shaderHandsAfterimage);
+        if (afterimageShader == null) {
+            restoreCompositeState();
+            return;
+        }
+
+        int frames = Math.max(2, Math.min(MAX_AFTERIMAGE_FRAMES, (int) module.afterimageOffset.get()));
+        int updateInterval = Math.max(1, (int) module.afterimageSpeed.get());
+        float peakOpacity = module.afterimageOpacity.get();
+
+        afterimageWriteIndex %= frames;
+        if (afterimageValidCount > frames) afterimageValidCount = frames;
+
+        boolean hasSword = mc.player != null
+                && (mc.player.getMainHandStack().isIn(ItemTags.SWORDS)
+                    || mc.player.getOffHandStack().isIn(ItemTags.SWORDS));
+
+        boolean isSwinging = false;
+        if (mc.player != null) {
+            fun.popka.mixin.ILivingEntity le = (fun.popka.mixin.ILivingEntity) mc.player;
+            isSwinging = le.getHandSwingProgress() > 0.001f || le.getLastHandSwingProgress() > 0.001f;
+        }
+
+        boolean active = hasSword && isSwinging;
+
+        if (active) {
+            afterimageDecayCounter = 0;
+            afterimageTickCounter++;
+            if (afterimageTickCounter >= updateInterval) {
+                copyMaskToHistory(afterimageHistory[afterimageWriteIndex]);
+                afterimageWriteIndex = (afterimageWriteIndex + 1) % frames;
+                afterimageTickCounter = 0;
+                if (afterimageValidCount < frames) afterimageValidCount++;
+            }
+        } else {
+            afterimageTickCounter = 0;
+            afterimageDecayCounter++;
+            if (afterimageDecayCounter >= updateInterval) {
+                if (afterimageValidCount > 0) afterimageValidCount--;
+                afterimageDecayCounter = 0;
+            }
+        }
+
+        if (afterimageValidCount == 0) {
+            restoreCompositeState();
+            return;
+        }
+
+        float texelX = 1.0f / Math.max(1, maskBuffer.textureWidth);
+        float texelY = 1.0f / Math.max(1, maskBuffer.textureHeight);
+
+        mc.getFramebuffer().beginWrite(false);
+        RenderSystem.enableBlend();
+        RenderSystem.disableDepthTest();
+        RenderSystem.colorMask(true, true, true, false);
+
+        RenderSystem.setShader(ShaderUtils.shaderHandsAfterimage);
+        RenderSystem.blendFuncSeparate(
+                GlStateManager.SrcFactor.SRC_ALPHA,
+                GlStateManager.DstFactor.ONE_MINUS_SRC_ALPHA,
+                GlStateManager.SrcFactor.ZERO,
+                GlStateManager.DstFactor.ONE
+        );
+
+        for (int i = 0; i < afterimageValidCount; i++) {
+            int idx = (afterimageWriteIndex - 1 - i + frames * 4) % frames;
+            Framebuffer hist = afterimageHistory[idx];
+            if (hist == null) continue;
+
+            float opacity = peakOpacity * (float) Math.pow(0.45f, i);
+            if (opacity <= 0.01f) continue;
+
+            RenderSystem.setShaderTexture(0, hist.getColorAttachment());
+            setUniform(afterimageShader, "color", 0.5f, 0.52f, 0.6f);
+            setUniform(afterimageShader, "opacity", opacity);
+            setUniform(afterimageShader, "offset", 0.0f, 0.0f);
+            setUniform(afterimageShader, "texelSize", texelX, texelY);
+            drawFullscreenQuad();
+        }
+
+        RenderSystem.disableBlend();
+
+        if (glowValue > EPSILON) {
+            int iterations = Math.max(3, Math.min(8, 4 + Math.round(outlineValue * 0.7f)));
+            int blurredMaskTexture = runKawaseBloom(iterations);
+
+            ShaderProgram glowShader = mc.getShaderLoader().getOrCreateProgram(ShaderUtils.shaderHandsGlow);
+            if (glowShader != null) {
+                mc.getFramebuffer().beginWrite(false);
+                RenderSystem.enableBlend();
+                RenderSystem.blendFuncSeparate(
+                        GlStateManager.SrcFactor.SRC_ALPHA,
+                        GlStateManager.DstFactor.ONE,
+                        GlStateManager.SrcFactor.ZERO,
+                        GlStateManager.DstFactor.ONE
+                );
+                RenderSystem.setShader(ShaderUtils.shaderHandsGlow);
+                RenderSystem.setShaderTexture(0, blurredMaskTexture);
+                RenderSystem.setShaderTexture(1, maskBuffer.getColorAttachment());
+                setUniform(glowShader, "color", ColorUtils.redf(color1), ColorUtils.greenf(color1), ColorUtils.bluef(color1));
+                setUniform(glowShader, "color2", ColorUtils.redf(color2), ColorUtils.greenf(color2), ColorUtils.bluef(color2));
+                setUniform(glowShader, "exposure", 1.0f + glowValue * 1.8f);
+                drawFullscreenQuad();
+            }
+        }
+
+        restoreCompositeState();
+    }
+
+    private void copyMaskToHistory(Framebuffer target) {
+        if (target == null || maskBuffer == null) return;
+        target.setClearColor(0f, 0f, 0f, 0f);
+        target.clear();
+
+        int readFbo = GL11.glGetInteger(GL30.GL_READ_FRAMEBUFFER_BINDING);
+        int drawFbo = GL11.glGetInteger(GL30.GL_DRAW_FRAMEBUFFER_BINDING);
+
+        GL30.glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, maskBuffer.fbo);
+        GL30.glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, target.fbo);
+        GL30.glBlitFramebuffer(
+                0, 0, width, height,
+                0, 0, width, height,
+                GL11.GL_COLOR_BUFFER_BIT,
+                GL11.GL_NEAREST
+        );
+
+        GL30.glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, readFbo);
+        GL30.glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, drawFbo);
+        mc.getFramebuffer().beginWrite(true);
+    }
+
     private void restoreCompositeState() {
         RenderSystem.colorMask(true, true, true, true);
         RenderSystem.depthMask(true);
@@ -372,6 +547,11 @@ public class ShaderHandsRenderer implements QClient {
 
     private boolean isEffectEnabled(ShaderHands module) {
         if (module == null || !module.isEnable()) return false;
+        if (module.mode.is("Новый")) {
+            if (mc.player == null) return false;
+            return mc.player.getMainHandStack().isIn(ItemTags.SWORDS)
+                    || mc.player.getOffHandStack().isIn(ItemTags.SWORDS);
+        }
         boolean hasGlow = module.glow.get() > EPSILON;
         boolean hasFill = module.fill.get() > EPSILON && module.alpha.get() > EPSILON;
         return hasGlow || hasFill;

@@ -11,4 +11,7 @@ public interface ILivingEntity {
 
     @Accessor("serverYaw") double getResolveYaw();
     @Accessor("serverPitch") double getResolvePitch();
+
+    @Accessor("handSwingProgress") float getHandSwingProgress();
+    @Accessor("lastHandSwingProgress") float getLastHandSwingProgress();
 }
