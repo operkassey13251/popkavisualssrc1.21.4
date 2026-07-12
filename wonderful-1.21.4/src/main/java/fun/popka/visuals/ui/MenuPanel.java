@@ -11,6 +11,7 @@ import fun.popka.api.utils.animation.AnimationUtils;
 import fun.popka.api.utils.animation.Easings;
 import fun.popka.api.utils.client.ClientSoundPlayer;
 import fun.popka.visuals.modules.Module;
+import fun.popka.visuals.ui.clickgui.ClickGuiConfigPanel;
 import fun.popka.visuals.ui.clickgui.ClickGuiInputHandler;
 import fun.popka.visuals.ui.clickgui.ClickGuiRenderer;
 import fun.popka.visuals.ui.clickgui.ClickGuiSettingRenderer;
@@ -24,6 +25,7 @@ public class MenuPanel extends Screen implements QClient {
     private final ClickGuiThemeSelector themeSelector = new ClickGuiThemeSelector();
     private final ClickGuiRenderer renderer = new ClickGuiRenderer(state, new ClickGuiSettingRenderer(), themeSelector);
     private final ClickGuiInputHandler inputHandler = new ClickGuiInputHandler(state, themeSelector);
+    private final ClickGuiConfigPanel configPanel = new ClickGuiConfigPanel(state);
     private final AnimationUtils openAnimation = new AnimationUtils(0f, 7.5f, Easings.CUBIC_OUT);
     private boolean closing;
     private boolean closeSoundPlayed;
@@ -66,6 +68,8 @@ public class MenuPanel extends Screen implements QClient {
 
         state.updatePosition(window, categoryCount);
         state.setRenderOffsetY(getPanelOffsetY(progress));
+        configPanel.update(closing);
+        configPanel.render(context, mouseX, mouseY, window, progress);
         renderer.render(context, mouseX, mouseY, window, progress);
 
         super.render(context, mouseX, mouseY, delta);
@@ -76,6 +80,9 @@ public class MenuPanel extends Screen implements QClient {
         if (closing) return true;
         syncLayout();
         state.setRenderOffsetY(getPanelOffsetY(getAnimationProgress()));
+        if (configPanel.mouseClicked(mouseX, mouseY, button, getWindow())) {
+            return true;
+        }
         return inputHandler.mouseClicked(mouseX, mouseY, button, getWindow())
                 || super.mouseClicked(mouseX, mouseY, button);
     }
@@ -101,6 +108,9 @@ public class MenuPanel extends Screen implements QClient {
         if (closing) return true;
         syncLayout();
         state.setRenderOffsetY(getPanelOffsetY(getAnimationProgress()));
+        if (configPanel.mouseScrolled(mouseX, mouseY, verticalAmount)) {
+            return true;
+        }
         return inputHandler.mouseScrolled(mouseX, mouseY, verticalAmount)
                 || super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
     }
@@ -108,6 +118,9 @@ public class MenuPanel extends Screen implements QClient {
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (closing) return true;
+        if (configPanel.isTextInputActive() && configPanel.keyPressed(keyCode, modifiers)) {
+            return true;
+        }
         if (inputHandler.keyPressed(keyCode, modifiers)) {
             return true;
         }
@@ -121,6 +134,9 @@ public class MenuPanel extends Screen implements QClient {
     @Override
     public boolean charTyped(char chr, int modifiers) {
         if (closing) return true;
+        if (configPanel.isTextInputActive() && configPanel.charTyped(chr)) {
+            return true;
+        }
         return inputHandler.charTyped(chr) || super.charTyped(chr, modifiers);
     }
 

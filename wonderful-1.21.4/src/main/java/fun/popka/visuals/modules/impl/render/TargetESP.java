@@ -1,5 +1,6 @@
 package fun.popka.visuals.modules.impl.render;
 
+import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.gl.ShaderProgramKeys;
 import net.minecraft.client.render.BufferBuilder;
@@ -53,7 +54,7 @@ public class TargetESP extends Module {
             {-1, -1, -1, -1, 1, -1}, {1, -1, -1, 1, 1, -1}, {1, -1, 1, 1, 1, 1}, {-1, -1, 1, -1, 1, 1}
     };
 
-    private final ModeSetting mode = new ModeSetting("Режим", "Картинка 1", "Картинка 1", "Картинка 2", "Кольцо", "Души", "Кубы", "Кристаллы");
+    private final ModeSetting mode = new ModeSetting("Режим", "Картинка 1", "Картинка 1", "Картинка 2", "Кольцо", "Души", "Кубы", "Кристаллы", "Молнии");
     private final FloatSetting size = new FloatSetting("Размер", 1.15f, 0.6f, 2.5f, 0.05f);
     private final FloatSetting ringRadius = new FloatSetting("Радиус кольца", 0.5f, 0.3f, 1.5f, 0.05f);
     private final FloatSetting ringSpeed = new FloatSetting("Скорость кольца", 1.0f, 0.3f, 3.0f, 0.1f);
@@ -65,6 +66,19 @@ public class TargetESP extends Module {
     private final FloatSetting bmwGhostLife = new FloatSetting("Время жизни (мс)", 350.0f, 150.0f, 500.0f, 25.0f);
     private final FloatSetting bmwStrengthXZ = new FloatSetting("Цикл XZ", 2000.0f, 1000.0f, 5000.0f, 100.0f);
     private final FloatSetting bmwStrengthY = new FloatSetting("Цикл Y", 1700.0f, 1000.0f, 5000.0f, 100.0f);
+    private final FloatSetting boltCount = new FloatSetting("Кол-во молний", 5.0f, 1.0f, 12.0f, 1.0f).visible(() -> mode.is("Молнии"));
+    private final FloatSetting boltSegments = new FloatSetting("Сегменты молнии", 10.0f, 4.0f, 30.0f, 1.0f).visible(() -> mode.is("Молнии"));
+    private final FloatSetting boltJitter = new FloatSetting("Разброс молнии", 0.25f, 0.05f, 1.0f, 0.05f).visible(() -> mode.is("Молнии"));
+    private final FloatSetting boltRefresh = new FloatSetting("Частота молнии", 90.0f, 10.0f, 400.0f, 5.0f).visible(() -> mode.is("Молнии"));
+    private final FloatSetting boltSpeed = new FloatSetting("Скорость молнии", 2.0f, 0.1f, 8.0f, 0.1f).visible(() -> mode.is("Молнии"));
+    private final FloatSetting boltWidth = new FloatSetting("Толщина молнии", 1.3f, 0.5f, 5.0f, 0.1f).visible(() -> mode.is("Молнии"));
+    private final FloatSetting boltVolume = new FloatSetting("Объём молнии", 1.0f, 0.0f, 3.0f, 0.1f).visible(() -> mode.is("Молнии"));
+    private final BooleanSetting boltGlow = new BooleanSetting("Свечение молнии", true).visible(() -> mode.is("Молнии"));
+    private final BooleanSetting boltBranches = new BooleanSetting("Ветви молнии", true).visible(() -> mode.is("Молнии"));
+    private final BooleanSetting boltFlicker = new BooleanSetting("Мерцание молнии", true).visible(() -> mode.is("Молнии"));
+    private final java.util.Random boltRandom = new java.util.Random();
+    private long lastBoltRefresh = 0L;
+    private long lastBoltTime = 0L;
     private float appearValue = 0f;
     private float scaleValue = 0f;
     private float rotProgress = 0f;
@@ -96,7 +110,7 @@ public class TargetESP extends Module {
         bmwStrengthY.visible(() -> mode.is("Райдер"));
         ringRadius.visible(() -> mode.is("Кольцо"));
         ringSpeed.visible(() -> mode.is("Кольцо"));
-        addSettings(mode, size, rotateSpeed, hurtColor, showOnHover, hoverReach, ringRadius, ringSpeed, bmwGhostCount, bmwGhostLife, bmwStrengthXZ, bmwStrengthY);
+        addSettings(mode, size, rotateSpeed, hurtColor, showOnHover, hoverReach, ringRadius, ringSpeed, bmwGhostCount, bmwGhostLife, bmwStrengthXZ, bmwStrengthY, boltCount, boltSegments, boltJitter, boltRefresh, boltSpeed, boltWidth, boltVolume, boltGlow, boltBranches, boltFlicker);
     }
 
     @Override
@@ -116,6 +130,8 @@ public class TargetESP extends Module {
         lastCubeTime = 0L;
         cubeParticles.clear();
         renderCubeParticles.clear();
+        lastBoltRefresh = 0L;
+        lastBoltTime = 0L;
         super.onDisable();
     }
 
@@ -262,6 +278,9 @@ public class TargetESP extends Module {
         }
         if (mode.is("Кубы")) {
             renderCubes(event, target, hasTarget);
+        }
+        if (mode.is("Молнии")) {
+            drawLightning3D(event, target, hasTarget);
         }
     }
 
@@ -1065,6 +1084,150 @@ public class TargetESP extends Module {
             int a = (int) (((baseColor >> 24) & 0xFF) * (1.0f - timePC));
             a = Math.max(0, Math.min(255, a));
             return (a << 24) | (baseColor & 0x00FFFFFF);
+        }
+    }
+
+    private void drawLightning3D(Event3DRender event, LivingEntity target, boolean hasTarget) {
+        if (mc.gameRenderer == null || mc.gameRenderer.getCamera() == null) return;
+        if (lastTargetPos == null) return;
+
+        Vec3d camPos = mc.gameRenderer.getCamera().getPos();
+        float tickDelta = event.getTickDelta();
+
+        Vec3d targetPos = lastTargetPos.add(0, lastTargetHeight * 0.5f, 0);
+        Vec3d sourcePos = mc.player.getCameraPosVec(tickDelta);
+
+        long now = System.currentTimeMillis();
+        long refreshMs = Math.max(10L, (long) boltRefresh.get());
+        boolean refresh = (now - lastBoltRefresh) >= refreshMs;
+        if (refresh) lastBoltRefresh = now;
+
+        int boltN = Math.max(1, Math.round(boltCount.get()));
+        int segN = Math.max(2, Math.round(boltSegments.get()));
+        float jit = boltJitter.get();
+        float lineW = boltWidth.get();
+        boolean glow = boltGlow.isState();
+        boolean branches = boltBranches.isState();
+
+        float hurtPC = getHurtPC(hasTarget ? target : lastTarget);
+        int baseColor = getLightningColor(hurtPC);
+        int r = (baseColor >> 16) & 0xFF;
+        int g = (baseColor >> 8) & 0xFF;
+        int b = baseColor & 0xFF;
+
+        java.util.List<LightningSegment> allSegments = new java.util.ArrayList<>();
+        for (int bi = 0; bi < boltN; bi++) {
+            long seed = refresh ? boltRandom.nextLong() : (lastBoltRefresh * 31L + bi * 7L + 1234567L);
+            collectBoltSegments(allSegments, sourcePos, targetPos, segN, jit, seed, branches, 0);
+        }
+
+        MatrixStack matrices = event.getMatrices();
+        matrices.push();
+        matrices.translate(-camPos.x, -camPos.y, -camPos.z);
+
+        try {
+            RenderSystem.enableBlend();
+            RenderSystem.disableCull();
+            RenderSystem.enableDepthTest();
+            RenderSystem.depthMask(false);
+            RenderSystem.setShader(ShaderProgramKeys.POSITION_COLOR);
+            GL11.glEnable(GL11.GL_LINE_SMOOTH);
+            GL11.glHint(GL11.GL_LINE_SMOOTH_HINT, GL11.GL_NICEST);
+
+            if (glow) {
+                RenderSystem.blendFuncSeparate(
+                        GlStateManager.SrcFactor.SRC_ALPHA,
+                        GlStateManager.DstFactor.ONE,
+                        GlStateManager.SrcFactor.ONE,
+                        GlStateManager.DstFactor.ZERO);
+                drawBoltPass(matrices, allSegments, lineW * 3.5f, 0.10f, r, g, b);
+                drawBoltPass(matrices, allSegments, lineW * 2.0f, 0.22f, r, g, b);
+                drawBoltPass(matrices, allSegments, lineW * 1.2f, 0.45f, r, g, b);
+            }
+            RenderSystem.defaultBlendFunc();
+            drawBoltPass(matrices, allSegments, lineW, 1.0f, r, g, b);
+        } finally {
+            RenderSystem.lineWidth(1.0f);
+            GL11.glDisable(GL11.GL_LINE_SMOOTH);
+            RenderSystem.depthMask(true);
+            RenderSystem.enableCull();
+            RenderSystem.enableDepthTest();
+            RenderSystem.defaultBlendFunc();
+            RenderSystem.disableBlend();
+            RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
+            matrices.pop();
+        }
+    }
+
+    private void drawBoltPass(MatrixStack matrices, java.util.List<LightningSegment> segments,
+                              float lineWidth, float alphaMul, int r, int g, int b) {
+        if (segments.isEmpty()) return;
+        RenderSystem.lineWidth(Math.min(lineWidth, 12.0f));
+        int a = (int) MathHelper.clamp(255.0f * alphaMul, 0f, 255f);
+        Matrix4f matrix = matrices.peek().getPositionMatrix();
+        BufferBuilder buffer = Tessellator.getInstance().begin(VertexFormat.DrawMode.DEBUG_LINES, VertexFormats.POSITION_COLOR);
+        for (LightningSegment seg : segments) {
+            buffer.vertex(matrix, seg.x1, seg.y1, seg.z1).color(r, g, b, a);
+            buffer.vertex(matrix, seg.x2, seg.y2, seg.z2).color(r, g, b, a);
+        }
+        BufferRenderer.drawWithGlobalProgram(buffer.end());
+    }
+
+    private void collectBoltSegments(java.util.List<LightningSegment> out, Vec3d start, Vec3d end,
+                                     int segCount, float jitterAmt, long seed, boolean branches, int depth) {
+        Vec3d dir = end.subtract(start);
+        double length = dir.length();
+        if (length < 1.0E-4) return;
+        Vec3d forward = dir.multiply(1.0 / length);
+        Vec3d up = Math.abs(forward.y) < 0.99 ? new Vec3d(0, 1, 0) : new Vec3d(1, 0, 0);
+        Vec3d right = forward.crossProduct(up).normalize();
+        Vec3d realUp = right.crossProduct(forward).normalize();
+
+        java.util.Random rng = new java.util.Random(seed);
+        Vec3d[] points = new Vec3d[segCount + 1];
+        points[0] = start;
+        points[segCount] = end;
+        for (int i = 1; i < segCount; i++) {
+            double t = (double) i / (double) segCount;
+            double taper = Math.sin(t * Math.PI);
+            double bx = start.x + dir.x * t;
+            double by = start.y + dir.y * t;
+            double bz = start.z + dir.z * t;
+            double offR = (rng.nextDouble() * 2.0 - 1.0) * jitterAmt * taper;
+            double offU = (rng.nextDouble() * 2.0 - 1.0) * jitterAmt * taper;
+            points[i] = new Vec3d(bx + right.x * offR + realUp.x * offU,
+                    by + right.y * offR + realUp.y * offU,
+                    bz + right.z * offR + realUp.z * offU);
+        }
+        for (int i = 0; i < segCount; i++) {
+            Vec3d p1 = points[i];
+            Vec3d p2 = points[i + 1];
+            out.add(new LightningSegment(
+                    (float) p1.x, (float) p1.y, (float) p1.z,
+                    (float) p2.x, (float) p2.y, (float) p2.z));
+            if (branches && depth < 2 && rng.nextFloat() < 0.18f && i > 1 && i < segCount - 1) {
+                Vec3d branchEnd = p2.add(right.multiply((rng.nextDouble() * 2.0 - 1.0) * jitterAmt * 1.5)
+                        .add(realUp.multiply((rng.nextDouble() * 2.0 - 1.0) * jitterAmt * 1.5)));
+                collectBoltSegments(out, p2, branchEnd, Math.max(2, segCount / 3), jitterAmt * 0.6f,
+                        rng.nextLong(), false, depth + 1);
+            }
+        }
+    }
+
+    private int getLightningColor(float hurtPC) {
+        int r1 = 80, g1 = 170, b1 = 255;
+        int r2 = 255, g2 = 60, b2 = 60;
+        int rr = (int) (r1 + (r2 - r1) * hurtPC);
+        int gg = (int) (g1 + (g2 - g1) * hurtPC);
+        int bb = (int) (b1 + (b2 - b1) * hurtPC);
+        return ColorUtils.rgb(rr, gg, bb);
+    }
+
+    private static class LightningSegment {
+        final float x1, y1, z1, x2, y2, z2;
+        LightningSegment(float x1, float y1, float z1, float x2, float y2, float z2) {
+            this.x1 = x1; this.y1 = y1; this.z1 = z1;
+            this.x2 = x2; this.y2 = y2; this.z2 = z2;
         }
     }
 }
