@@ -25,13 +25,17 @@ public class ClickGuiInputHandler implements QClient {
         this.state = state;
     }
 
+    private ClickGuiStyle layout() {
+        return state.getStyle();
+    }
+
     public boolean mouseClicked(double mouseX, double mouseY, int button, Window window) {
         if (window != null && button == 0) {
             int categoryCount = Module.ModuleCategory.values().length;
             float searchW = getSearchWidth();
-            float searchX = ClickGuiLayout.getSearchX(state.getX(), categoryCount, searchW);
-            float searchY = ClickGuiLayout.getSearchY(state.getY() + state.getRenderOffsetY());
-            boolean searchHovered = HoveringUtils.isHovered(mouseX, mouseY, searchX, searchY, searchW, ClickGuiLayout.SEARCH_HEIGHT);
+            float searchX = layout().getSearchX(state.getX(), categoryCount, searchW);
+            float searchY = layout().getSearchY(state.getY() + state.getRenderOffsetY());
+            boolean searchHovered = HoveringUtils.isHovered(mouseX, mouseY, searchX, searchY, searchW, layout().getSearchHeight());
             state.setSearchActive(searchHovered);
             if (searchHovered) {
                 state.setEditingTextSetting(null);
@@ -57,19 +61,19 @@ public class ClickGuiInputHandler implements QClient {
         Module.ModuleCategory[] categories = Module.ModuleCategory.values();
         for (int i = 0; i < categories.length; i++) {
             Module.ModuleCategory category = categories[i];
-            float panelX = ClickGuiLayout.getCategoryPanelX(state.getX(), i);
-            float contentY = ClickGuiLayout.getContentY(state.getY() + state.getRenderOffsetY());
-            float contentHeight = ClickGuiLayout.getContentHeight();
+            float panelX = layout().getCategoryPanelX(state.getX(), i);
+            float contentY = layout().getContentY(state.getY() + state.getRenderOffsetY());
+            float contentHeight = layout().getContentHeight();
 
-            if (!HoveringUtils.isHovered(mouseX, mouseY, panelX, contentY, ClickGuiLayout.WIDTH, contentHeight)) {
+            if (!HoveringUtils.isHovered(mouseX, mouseY, panelX, contentY, layout().getWidth(), contentHeight)) {
                 continue;
             }
 
             float moduleY = contentY + state.getScroll(category);
             for (Module module : state.getModules(category)) {
                 float openProgress = state.getOpenProgress(module);
-                float moduleHeight = ClickGuiLayout.getModuleHeight(module, openProgress);
-                if (HoveringUtils.isHovered(mouseX, mouseY, panelX + ClickGuiLayout.MODULE_PADDING, moduleY, ClickGuiLayout.MODULE_INNER_WIDTH, ClickGuiLayout.MODULE_HEADER_HEIGHT)) {
+                float moduleHeight = layout().getModuleHeight(module, openProgress);
+                if (HoveringUtils.isHovered(mouseX, mouseY, panelX + layout().getModulePadding(), moduleY, layout().getModuleInnerWidth(), layout().getModuleHeaderHeight())) {
                     if (button == 0) {
                         module.toggle();
                         return true;
@@ -93,7 +97,7 @@ public class ClickGuiInputHandler implements QClient {
                     }
                 }
 
-                moduleY += ClickGuiLayout.MODULE_GAP + moduleHeight;
+                moduleY += layout().getModuleGap() + moduleHeight;
             }
         }
 
@@ -125,7 +129,7 @@ public class ClickGuiInputHandler implements QClient {
         }
 
         int categoryCount = Module.ModuleCategory.values().length;
-        float searchX = ClickGuiLayout.getSearchX(state.getX(), categoryCount, getSearchWidth());
+        float searchX = layout().getSearchX(state.getX(), categoryCount, getSearchWidth());
         state.updateSearchSelection(getSearchIndexAt(mouseX, searchX));
         return true;
     }
@@ -134,10 +138,10 @@ public class ClickGuiInputHandler implements QClient {
         Module.ModuleCategory[] categories = Module.ModuleCategory.values();
         for (int i = 0; i < categories.length; i++) {
             Module.ModuleCategory category = categories[i];
-            float panelX = ClickGuiLayout.getCategoryPanelX(state.getX(), i);
-            float contentY = ClickGuiLayout.getContentY(state.getY() + state.getRenderOffsetY());
-            float contentHeight = ClickGuiLayout.getContentHeight();
-            if (HoveringUtils.isHovered(mouseX, mouseY, panelX, contentY, ClickGuiLayout.WIDTH, contentHeight)) {
+            float panelX = layout().getCategoryPanelX(state.getX(), i);
+            float contentY = layout().getContentY(state.getY() + state.getRenderOffsetY());
+            float contentHeight = layout().getContentHeight();
+            if (HoveringUtils.isHovered(mouseX, mouseY, panelX, contentY, layout().getWidth(), contentHeight)) {
                 state.addScroll(category, verticalAmount, contentHeight);
                 return true;
             }
@@ -254,7 +258,7 @@ public class ClickGuiInputHandler implements QClient {
 
     private int getSearchIndexAt(double mouseX, float searchX) {
         String text = state.getSearchText();
-        float textX = searchX + ClickGuiLayout.SEARCH_TEXT_X;
+        float textX = searchX + layout().getSearchTextX();
         float localX = (float) mouseX - textX;
         if (localX <= 0f || text.isEmpty()) {
             return 0;
@@ -274,27 +278,28 @@ public class ClickGuiInputHandler implements QClient {
     private float getSearchWidth() {
         String query = state.getSearchText();
         String text = query.isEmpty() ? "Search..." : query;
-        float contentWidth = ClickGuiLayout.SEARCH_TEXT_X + issue(14).getWidth(text) + ClickGuiLayout.SEARCH_RIGHT_PADDING;
-        return Math.max(ClickGuiLayout.SEARCH_WIDTH, contentWidth);
+        float contentWidth = layout().getSearchTextX() + issue(14).getWidth(text) + layout().getSearchRightPadding();
+        return Math.max(layout().getSearchWidth(), contentWidth);
     }
 
     private boolean handleSettingClick(double mouseX, double mouseY, int button, float panelX, float moduleY, List<Setting> settings) {
-        float settingYoffset = ClickGuiLayout.SETTING_START_Y;
+        ClickGuiStyle layout = layout();
+        float settingYoffset = layout.getSettingStartY();
         for (Setting setting : settings) {
             if (setting == null || !setting.visible()) {
                 continue;
             }
 
-            float settingY = moduleY + settingYoffset + ClickGuiLayout.SETTING_PADDING;
+            float settingY = moduleY + settingYoffset + layout.getSettingPadding();
             if (setting instanceof BooleanSetting booleanSetting) {
-                if (button == 0 && HoveringUtils.isHovered(mouseX, mouseY, panelX + ClickGuiLayout.BOOLEAN_TOGGLE_X, settingY - 2, ClickGuiLayout.BOOLEAN_TOGGLE_W, 10)) {
+                if (button == 0 && HoveringUtils.isHovered(mouseX, mouseY, panelX + layout.getBooleanToggleX(), settingY - 2, layout.getBooleanToggleW(), 10)) {
                     booleanSetting.setState(!booleanSetting.isState());
                     return true;
                 }
                 settingYoffset += 12f;
             } else if (setting instanceof TextSetting textSetting) {
-                float boxWidth = ClickGuiLayout.TEXT_SETTING_WIDTH;
-                float boxX = panelX + ClickGuiLayout.TEXT_BOX_X;
+                float boxWidth = layout.getTextSettingWidth();
+                float boxX = panelX + layout.getTextBoxX();
                 if (button == 0 && HoveringUtils.isHovered(mouseX, mouseY, boxX, settingY - 2.5f, boxWidth, 9)) {
                     state.setSearchActive(false);
                     state.stopSearchSelection();
@@ -303,9 +308,9 @@ public class ClickGuiInputHandler implements QClient {
                 }
                 settingYoffset += 12f;
             } else if (setting instanceof FloatSetting floatSetting) {
-                if (button == 0 && HoveringUtils.isHovered(mouseX, mouseY, panelX + ClickGuiLayout.SETTING_LEFT, settingY + 9, ClickGuiLayout.SLIDER_WIDTH, 6)) {
+                if (button == 0 && HoveringUtils.isHovered(mouseX, mouseY, panelX + layout.getSettingLeft(), settingY + 9, layout.getSliderWidth(), 6)) {
                     floatSetting.setActive(true);
-                    floatSetting.setValue(state.getSliderValue(floatSetting, panelX + ClickGuiLayout.SETTING_LEFT, mouseX));
+                    floatSetting.setValue(state.getSliderValue(floatSetting, panelX + layout.getSettingLeft(), mouseX));
                     state.beginSliderDrag(floatSetting, mouseX);
                     return true;
                 }
@@ -313,30 +318,30 @@ public class ClickGuiInputHandler implements QClient {
             } else if (setting instanceof ModeSetting modeSetting) {
                 float modeY = settingY + 10;
                 for (String mode : modeSetting.getMods()) {
-                    if (button == 0 && HoveringUtils.isHovered(mouseX, mouseY, panelX + ClickGuiLayout.SETTING_LEFT, modeY - 2, ClickGuiLayout.CLICKABLE_WIDTH, 10)) {
+                    if (button == 0 && HoveringUtils.isHovered(mouseX, mouseY, panelX + layout.getSettingLeft(), modeY - 2, layout.getClickableWidth(), 10)) {
                         modeSetting.set(mode);
                         return true;
                     }
                     modeY += 10f;
                 }
-                settingYoffset += ClickGuiLayout.calculateModeSettingHeight(modeSetting);
+                settingYoffset += layout.calculateModeSettingHeight(modeSetting);
             } else if (setting instanceof ListSetting listSetting) {
                 float listY = settingY + 10;
                 for (BooleanSetting entry : listSetting.getSettings()) {
                     if (!entry.visible()) {
                         continue;
                     }
-                    if (button == 0 && HoveringUtils.isHovered(mouseX, mouseY, panelX + ClickGuiLayout.SETTING_LEFT, listY - 2, ClickGuiLayout.CLICKABLE_WIDTH, 10)) {
+                    if (button == 0 && HoveringUtils.isHovered(mouseX, mouseY, panelX + layout.getSettingLeft(), listY - 2, layout.getClickableWidth(), 10)) {
                         entry.setState(!entry.isState());
                         return true;
                     }
                     listY += 10f;
                 }
-                settingYoffset += ClickGuiLayout.calculateListSettingHeight(listSetting);
+                settingYoffset += layout.calculateListSettingHeight(listSetting);
             } else if (setting instanceof BindSetting bindSetting) {
                 String bindString = state.getBindingSetting() == bindSetting ? "..." : state.toEnglish(KeyBoardUtils.getBindName(bindSetting.getKey()));
                 float bindWidth = issue(12).getWidth(bindString) + 6f;
-                float bindX = panelX + ClickGuiLayout.SETTING_RIGHT - bindWidth;
+                float bindX = panelX + layout.getSettingRight() - bindWidth;
                 if (button == 0 && HoveringUtils.isHovered(mouseX, mouseY, bindX, settingY - 2.5f, bindWidth, 9)) {
                     state.setBindingSetting(bindSetting);
                     return true;

@@ -1,6 +1,7 @@
 package fun.popka.visuals.ui.clickgui;
 
 import net.minecraft.client.util.Window;
+import fun.popka.Popka;
 import fun.popka.api.storages.implement.helpertstorages.enumvar.ModuleClass;
 import fun.popka.api.utils.animation.AnimationUtils;
 import fun.popka.api.utils.animation.Easings;
@@ -18,6 +19,7 @@ import java.util.Locale;
 import java.util.Map;
 
 public class ClickGuiState {
+    private ClickGuiStyle style = ClickGuiStyle.DROPDOWN;
     private static final Map<Character, Character> RU_TO_EN = new HashMap<>();
 
     static {
@@ -64,7 +66,41 @@ public class ClickGuiState {
     private boolean searchDragging;
 
     public ClickGuiState() {
+        applyPersistedStyle();
         refreshModules();
+    }
+
+    private void applyPersistedStyle() {
+        try {
+            if (Popka.INSTANCE != null && Popka.INSTANCE.configStorage != null) {
+                this.style = ClickGuiStyle.fromName(Popka.INSTANCE.configStorage.clickGuiStyle);
+            }
+        } catch (Exception ignored) {
+        }
+    }
+
+    public ClickGuiStyle getStyle() {
+        return style;
+    }
+
+    public void setStyle(ClickGuiStyle style) {
+        if (style == null) {
+            style = ClickGuiStyle.DROPDOWN;
+        }
+        this.style = style;
+        try {
+            if (Popka.INSTANCE != null && Popka.INSTANCE.configStorage != null) {
+                Popka.INSTANCE.configStorage.clickGuiStyle = style.name();
+            }
+        } catch (Exception ignored) {
+        }
+        for (Module.ModuleCategory category : Module.ModuleCategory.values()) {
+            categoryScrollTarget.put(category, 0f);
+            AnimationUtils anim = categoryScrollAnimation.get(category);
+            if (anim != null) {
+                anim.update(0f);
+            }
+        }
     }
 
     public void refreshModules() {
@@ -80,9 +116,9 @@ public class ClickGuiState {
     }
 
     public void updatePosition(Window window, int categoryCount) {
-        float totalCategoriesWidth = ClickGuiLayout.getTotalCategoriesWidth(categoryCount);
+        float totalCategoriesWidth = style.getTotalCategoriesWidth(categoryCount);
         this.x = (window.getScaledWidth() / 2F) - (totalCategoriesWidth / 2F);
-        this.y = (window.getScaledHeight() / 2F) - (ClickGuiLayout.HEIGHT / 2F);
+        this.y = (window.getScaledHeight() / 2F) - (style.getHeight() / 2F);
     }
 
     public float getX() {
@@ -135,7 +171,7 @@ public class ClickGuiState {
     public float getSliderValue(FloatSetting setting, float posX, double mouseX) {
         float delta = setting.getMax() - setting.getMin();
         float clickedX = (float) mouseX - posX;
-        float value = Math.max(0f, Math.min(1f, clickedX / ClickGuiLayout.SLIDER_WIDTH));
+        float value = Math.max(0f, Math.min(1f, clickedX / style.getSliderWidth()));
         float outValue = setting.getMin() + delta * value;
         float increment = setting.getIncrement();
         outValue = Math.round(outValue / increment) * increment;
@@ -172,7 +208,7 @@ public class ClickGuiState {
             return setting.get();
         }
 
-        double pixelsPerStep = ClickGuiLayout.SLIDER_WIDTH / steps;
+        double pixelsPerStep = style.getSliderWidth() / steps;
         if (pixelsPerStep <= 0.0D) {
             return setting.get();
         }
@@ -217,7 +253,7 @@ public class ClickGuiState {
     public float getTotalModulesHeight(Module.ModuleCategory category) {
         float totalHeight = 0f;
         for (Module module : getModules(category)) {
-            totalHeight += ClickGuiLayout.MODULE_GAP + ClickGuiLayout.getModuleHeight(module, getOpenProgress(module));
+            totalHeight += style.getModuleGap() + style.getModuleHeight(module, getOpenProgress(module));
         }
         return totalHeight;
     }
@@ -361,7 +397,7 @@ public class ClickGuiState {
     }
 
     public void appendSearchChar(char chr) {
-        if (Character.isISOControl(chr) || (searchText.length() >= ClickGuiLayout.SEARCH_MAX_CHARS && !hasSearchSelection())) {
+        if (Character.isISOControl(chr) || (searchText.length() >= style.getSearchMaxChars() && !hasSearchSelection())) {
             return;
         }
         replaceSearchSelection(String.valueOf(chr));
@@ -473,7 +509,7 @@ public class ClickGuiState {
             selectionStart = searchCursor;
             selectionEnd = searchCursor;
         }
-        int available = Math.max(0, ClickGuiLayout.SEARCH_MAX_CHARS - (searchText.length() - (selectionEnd - selectionStart)));
+        int available = Math.max(0, style.getSearchMaxChars() - (searchText.length() - (selectionEnd - selectionStart)));
         if (insert.length() > available) {
             insert = insert.substring(0, available);
         }
@@ -502,7 +538,7 @@ public class ClickGuiState {
         }
 
         StringBuilder builder = new StringBuilder();
-        for (int i = 0; i < text.length() && builder.length() < ClickGuiLayout.SEARCH_MAX_CHARS; i++) {
+        for (int i = 0; i < text.length() && builder.length() < style.getSearchMaxChars(); i++) {
             char chr = text.charAt(i);
             if (!Character.isISOControl(chr)) {
                 builder.append(chr);

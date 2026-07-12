@@ -49,6 +49,10 @@ public class ClickGuiThemePanel implements QClient {
     private ThemeStorage.Themes lastClickTheme = null;
     private long lastClickTime = 0L;
 
+    private ClickGuiStyle layout() {
+        return state.getStyle();
+    }
+
     public ClickGuiThemePanel(ClickGuiState state) {
         this.state = state;
         refreshThemes();
@@ -77,7 +81,7 @@ public class ClickGuiThemePanel implements QClient {
         if (window == null) {
             return 6f;
         }
-        return window.getScaledWidth() - 6f - ClickGuiLayout.WIDTH;
+        return window.getScaledWidth() - 6f - layout().getWidth();
     }
 
     public float getPanelX() {
@@ -101,21 +105,21 @@ public class ClickGuiThemePanel implements QClient {
         float panelX = getPanelX();
         float panelY = getPanelY();
 
-        RenderUtils.drawRoundedRect(context.getMatrices(), panelX, panelY, ClickGuiLayout.WIDTH, ClickGuiLayout.HEIGHT, ClickGuiLayout.PANEL_RADIUS, alpha(ClickGuiLayout.getPanelBg(colorTheme), alphaMul));
-        RenderUtils.drawGradientRect(context.getMatrices(), panelX, panelY, ClickGuiLayout.WIDTH, HEADER_HEIGHT, ClickGuiLayout.PANEL_RADIUS, alpha(ClickGuiLayout.getPanelHeaderBg(colorTheme), alphaMul), alpha(ClickGuiLayout.getPanelBg(colorTheme), alphaMul));
-        RenderUtils.drawRoundedRect(context.getMatrices(), panelX, panelY + SEPARATOR_Y, ClickGuiLayout.WIDTH, 0.5F, 0, alpha(ClickGuiLayout.getSeparator(colorTheme), alphaMul));
+        RenderUtils.drawRoundedRect(context.getMatrices(), panelX, panelY, layout().getWidth(), layout().getHeight(), layout().getPanelRadius(), alpha(layout().getPanelBg(colorTheme), alphaMul));
+        RenderUtils.drawGradientRect(context.getMatrices(), panelX, panelY, layout().getWidth(), HEADER_HEIGHT, layout().getPanelRadius(), alpha(layout().getPanelHeaderBg(colorTheme), alphaMul), alpha(layout().getPanelBg(colorTheme), alphaMul));
+        RenderUtils.drawRoundedRect(context.getMatrices(), panelX, panelY + SEPARATOR_Y, layout().getWidth(), 0.5F, 0, alpha(layout().getSeparator(colorTheme), alphaMul));
         if (((shadeColor >> 24) & 0xFF) > 0) {
-            RenderUtils.drawRoundedRect(context.getMatrices(), panelX, panelY, ClickGuiLayout.WIDTH, ClickGuiLayout.HEIGHT, ClickGuiLayout.PANEL_RADIUS, shadeColor);
+            RenderUtils.drawRoundedRect(context.getMatrices(), panelX, panelY, layout().getWidth(), layout().getHeight(), layout().getPanelRadius(), shadeColor);
         }
 
-        float headerIconX = panelX + ClickGuiLayout.HEADER_CENTER_ICON - (issue(15).getWidth(HEADER_NAME) / 2F) - 2;
+        float headerIconX = panelX + layout().getHeaderCenterIcon() - (issue(15).getWidth(HEADER_NAME) / 2F) - 2;
         icons(14).drawCenteredString(context.getMatrices(), HEADER_ICON, headerIconX, panelY + 10, alpha(colorTheme, alphaMul));
-        issue(15).drawCenteredString(context.getMatrices(), HEADER_NAME, panelX + ClickGuiLayout.HEADER_CENTER_TEXT, panelY + 9, alpha(ClickGuiLayout.TEXT_PRIMARY, alphaMul));
+        issue(15).drawCenteredString(context.getMatrices(), HEADER_NAME, panelX + layout().getHeaderCenterText(), panelY + 9, alpha(layout().getTextPrimary(), alphaMul));
 
         refreshThemes();
 
         float listTop = panelY + CONTENT_TOP;
-        float listBottom = panelY + ClickGuiLayout.HEIGHT - CONTENT_BOTTOM_PADDING;
+        float listBottom = panelY + layout().getHeight() - CONTENT_BOTTOM_PADDING;
         float listHeight = listBottom - listTop;
 
         clampScroll(listHeight);
@@ -136,14 +140,14 @@ public class ClickGuiThemePanel implements QClient {
         ThemeStorage.Themes currentTheme = Popka.INSTANCE.themeStorage.getThemes();
         for (int i = 0; i < count; i++) {
             String key = cachedThemes.get(i).name();
-            boolean isHovered = canHover && HoveringUtils.isHovered(mouseX, mouseY, panelX + ClickGuiLayout.MODULE_PADDING, rowYs[i] - 0.5f, ClickGuiLayout.MODULE_INNER_WIDTH, THEME_ROW_HEIGHT + 1f);
+            boolean isHovered = canHover && HoveringUtils.isHovered(mouseX, mouseY, panelX + layout().getModulePadding(), rowYs[i] - 0.5f, layout().getModuleInnerWidth(), THEME_ROW_HEIGHT + 1f);
             AnimationUtils anim = getThemeHoverAnimation(key, isHovered);
             anim.update(isHovered ? 1f : 0f);
             hovers[i] = anim.getValue();
         }
 
         ScissorUtils.push();
-        ScissorUtils.setFromComponentCoordinates(panelX, listTop, ClickGuiLayout.WIDTH, listHeight);
+        ScissorUtils.setFromComponentCoordinates(panelX, listTop, layout().getWidth(), listHeight);
 
         for (int i = 0; i < count; i++) {
             if (rowYs[i] + THEME_ROW_HEIGHT >= listTop && rowYs[i] <= listBottom) {
@@ -160,13 +164,13 @@ public class ClickGuiThemePanel implements QClient {
         float intensity = isCurrent ? 1.0f : hover;
 
         if (intensity > 0.01f) {
-            int bgTop = ColorUtils.applyAlpha(ClickGuiLayout.getModuleEnabledBgTop(colorTheme), alphaMul * intensity);
-            int bgBottom = ColorUtils.applyAlpha(ClickGuiLayout.getModuleEnabledBgBottom(colorTheme), alphaMul * intensity);
-            RenderUtils.drawRoundedRect(context.getMatrices(), panelX + ClickGuiLayout.MODULE_PADDING, rowY - 0.5f, ClickGuiLayout.MODULE_INNER_WIDTH, THEME_ROW_HEIGHT + 1, 4, bgBottom);
-            RenderUtils.drawGradientRect(context.getMatrices(), panelX + ClickGuiLayout.MODULE_PADDING + 0.5f, rowY, ClickGuiLayout.MODULE_INNER_WIDTH - 1f, THEME_ROW_HEIGHT, 4, bgTop, bgBottom, false);
+            int bgTop = ColorUtils.applyAlpha(layout().getModuleEnabledBgTop(colorTheme), alphaMul * intensity);
+            int bgBottom = ColorUtils.applyAlpha(layout().getModuleEnabledBgBottom(colorTheme), alphaMul * intensity);
+            RenderUtils.drawRoundedRect(context.getMatrices(), panelX + layout().getModulePadding(), rowY - 0.5f, layout().getModuleInnerWidth(), THEME_ROW_HEIGHT + 1, 4, bgBottom);
+            RenderUtils.drawGradientRect(context.getMatrices(), panelX + layout().getModulePadding() + 0.5f, rowY, layout().getModuleInnerWidth() - 1f, THEME_ROW_HEIGHT, 4, bgTop, bgBottom, false);
         }
 
-        int nameColor = isCurrent ? alpha(colorTheme, alphaMul) : alpha(ClickGuiLayout.TEXT_PRIMARY, alphaMul);
+        int nameColor = isCurrent ? alpha(colorTheme, alphaMul) : alpha(layout().getTextPrimary(), alphaMul);
         String displayName = truncateName(theme.name(), THEME_DOT_X - 2f - THEME_NAME_LEFT);
         issue(13).draw(context.getMatrices(), displayName, panelX + THEME_NAME_LEFT, rowY + 5f, nameColor);
 
@@ -185,20 +189,20 @@ public class ClickGuiThemePanel implements QClient {
         float panelX = getPanelX();
         float panelY = getPanelY();
 
-        boolean onPanel = HoveringUtils.isHovered(mouseX, mouseY, panelX, panelY, ClickGuiLayout.WIDTH, ClickGuiLayout.HEIGHT);
+        boolean onPanel = HoveringUtils.isHovered(mouseX, mouseY, panelX, panelY, layout().getWidth(), layout().getHeight());
         if (!onPanel) {
             return false;
         }
 
         float listTop = panelY + CONTENT_TOP;
-        float listBottom = panelY + ClickGuiLayout.HEIGHT - CONTENT_BOTTOM_PADDING;
+        float listBottom = panelY + layout().getHeight() - CONTENT_BOTTOM_PADDING;
         float listHeight = listBottom - listTop;
-        if (HoveringUtils.isHovered(mouseX, mouseY, panelX, listTop, ClickGuiLayout.WIDTH, listHeight)) {
+        if (HoveringUtils.isHovered(mouseX, mouseY, panelX, listTop, layout().getWidth(), listHeight)) {
             scrollAnimation.update(scrollTarget);
             float scroll = scrollAnimation.getValue();
             float rowY = listTop + scroll;
             for (ThemeStorage.Themes theme : cachedThemes) {
-                if (HoveringUtils.isHovered(mouseX, mouseY, panelX + ClickGuiLayout.MODULE_PADDING, rowY - 0.5f, ClickGuiLayout.MODULE_INNER_WIDTH, THEME_ROW_HEIGHT + 1f)) {
+                if (HoveringUtils.isHovered(mouseX, mouseY, panelX + layout().getModulePadding(), rowY - 0.5f, layout().getModuleInnerWidth(), THEME_ROW_HEIGHT + 1f)) {
                     handleRowClick(theme);
                     return true;
                 }
@@ -240,10 +244,10 @@ public class ClickGuiThemePanel implements QClient {
         float panelX = getPanelX();
         float panelY = getPanelY();
         float listTop = panelY + CONTENT_TOP;
-        float listBottom = panelY + ClickGuiLayout.HEIGHT - CONTENT_BOTTOM_PADDING;
+        float listBottom = panelY + layout().getHeight() - CONTENT_BOTTOM_PADDING;
         float listHeight = listBottom - listTop;
 
-        if (HoveringUtils.isHovered(mouseX, mouseY, panelX, listTop, ClickGuiLayout.WIDTH, listHeight)) {
+        if (HoveringUtils.isHovered(mouseX, mouseY, panelX, listTop, layout().getWidth(), listHeight)) {
             scrollTarget += (float) (verticalAmount * 20);
             clampScroll(listHeight);
             return true;

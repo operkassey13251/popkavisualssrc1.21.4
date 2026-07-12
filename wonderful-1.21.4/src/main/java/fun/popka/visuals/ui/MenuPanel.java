@@ -16,6 +16,7 @@ import fun.popka.visuals.ui.clickgui.ClickGuiInputHandler;
 import fun.popka.visuals.ui.clickgui.ClickGuiRenderer;
 import fun.popka.visuals.ui.clickgui.ClickGuiSettingRenderer;
 import fun.popka.visuals.ui.clickgui.ClickGuiState;
+import fun.popka.visuals.ui.clickgui.ClickGuiStyle;
 import fun.popka.visuals.ui.clickgui.ClickGuiThemePanel;
 
 public class MenuPanel extends Screen implements QClient {
@@ -132,11 +133,33 @@ public class MenuPanel extends Screen implements QClient {
         if (inputHandler.keyPressed(keyCode, modifiers)) {
             return true;
         }
+        if (canToggleStyle() && keyCode == GLFW.GLFW_KEY_R) {
+            toggleStyle();
+            return true;
+        }
         if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
             startClosing();
             return true;
         }
         return super.keyPressed(keyCode, scanCode, modifiers);
+    }
+
+    private boolean canToggleStyle() {
+        return !configPanel.isTextInputActive()
+                && !state.isSearchActive()
+                && state.getBindingModule() == null
+                && state.getBindingSetting() == null;
+    }
+
+    private void toggleStyle() {
+        ClickGuiStyle next = state.getStyle() == ClickGuiStyle.DROPDOWN
+                ? ClickGuiStyle.NEW
+                : ClickGuiStyle.DROPDOWN;
+        state.setStyle(next);
+        Window window = getWindow();
+        if (window != null) {
+            state.updatePosition(window, categoryCount);
+        }
     }
 
     @Override

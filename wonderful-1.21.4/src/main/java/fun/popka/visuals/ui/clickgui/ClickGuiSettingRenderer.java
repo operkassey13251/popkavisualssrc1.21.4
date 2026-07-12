@@ -29,39 +29,40 @@ public class ClickGuiSettingRenderer {
             return;
         }
 
-        float maxSettingHeight = ClickGuiLayout.calculateSettingsHeight(module);
-        float settingsClipY = moduleY + ClickGuiLayout.SETTING_START_Y;
+        ClickGuiStyle layout = state.getStyle();
+        float maxSettingHeight = layout.calculateSettingsHeight(module);
+        float settingsClipY = moduleY + layout.getSettingStartY();
         float settingsClipHeight = maxSettingHeight * openProgress;
 
         ScissorUtils.push();
-        ScissorUtils.setFromComponentCoordinates(panelX + ClickGuiLayout.MODULE_PADDING, settingsClipY, ClickGuiLayout.MODULE_INNER_WIDTH, settingsClipHeight);
+        ScissorUtils.setFromComponentCoordinates(panelX + layout.getModulePadding(), settingsClipY, layout.getModuleInnerWidth(), settingsClipHeight);
 
-        float settingYoffset = ClickGuiLayout.SETTING_START_Y;
+        float settingYoffset = layout.getSettingStartY();
         for (Setting setting : settings) {
             if (setting == null || !setting.visible()) {
                 continue;
             }
 
-            float settingY = moduleY + settingYoffset + ClickGuiLayout.SETTING_PADDING;
+            float settingY = moduleY + settingYoffset + layout.getSettingPadding();
             int alpha = (int) (255 * openProgress);
 
             if (setting instanceof BooleanSetting booleanSetting) {
-                renderBooleanSetting(context, panelX, settingY, alpha, colorTheme, mouseX, mouseY, booleanSetting, state);
+                renderBooleanSetting(context, panelX, settingY, alpha, colorTheme, mouseX, mouseY, booleanSetting, state, layout);
                 settingYoffset += 12f;
             } else if (setting instanceof TextSetting textSetting) {
-                renderTextSetting(context, panelX, settingY, alpha, colorTheme, mouseX, mouseY, textSetting, state);
+                renderTextSetting(context, panelX, settingY, alpha, colorTheme, mouseX, mouseY, textSetting, state, layout);
                 settingYoffset += 22f;
             } else if (setting instanceof FloatSetting floatSetting) {
-                renderFloatSetting(context, panelX, settingY, alpha, colorTheme, mouseX, mouseY, floatSetting, state);
+                renderFloatSetting(context, panelX, settingY, alpha, colorTheme, mouseX, mouseY, floatSetting, state, layout);
                 settingYoffset += 22f;
             } else if (setting instanceof ModeSetting modeSetting) {
-                renderModeSetting(context, panelX, settingY, alpha, colorTheme, mouseX, mouseY, modeSetting, state);
-                settingYoffset += ClickGuiLayout.calculateModeSettingHeight(modeSetting);
+                renderModeSetting(context, panelX, settingY, alpha, colorTheme, mouseX, mouseY, modeSetting, state, layout);
+                settingYoffset += layout.calculateModeSettingHeight(modeSetting);
             } else if (setting instanceof ListSetting listSetting) {
-                renderListSetting(context, panelX, settingY, alpha, colorTheme, mouseX, mouseY, listSetting, state);
-                settingYoffset += ClickGuiLayout.calculateListSettingHeight(listSetting);
+                renderListSetting(context, panelX, settingY, alpha, colorTheme, mouseX, mouseY, listSetting, state, layout);
+                settingYoffset += layout.calculateListSettingHeight(listSetting);
             } else if (setting instanceof BindSetting bindSetting) {
-                renderBindSetting(context, panelX, settingY, alpha, colorTheme, mouseX, mouseY, bindSetting, state);
+                renderBindSetting(context, panelX, settingY, alpha, colorTheme, mouseX, mouseY, bindSetting, state, layout);
                 settingYoffset += 12f;
             }
         }
@@ -69,7 +70,7 @@ public class ClickGuiSettingRenderer {
         ScissorUtils.pop();
     }
 
-    private void renderBooleanSetting(DrawContext context, float panelX, float settingY, int alpha, int colorTheme, double mouseX, double mouseY, BooleanSetting booleanSetting, ClickGuiState state) {
+    private void renderBooleanSetting(DrawContext context, float panelX, float settingY, int alpha, int colorTheme, double mouseX, double mouseY, BooleanSetting booleanSetting, ClickGuiState state, ClickGuiStyle layout) {
         AnimationUtils backgroundAnimation = state.getBooleanBackgroundAnimation(booleanSetting);
         AnimationUtils circleAnimation = state.getBooleanCircleAnimation(booleanSetting);
         backgroundAnimation.update(booleanSetting.isState() ? 1f : 0f);
@@ -78,7 +79,7 @@ public class ClickGuiSettingRenderer {
         float backgroundProgress = backgroundAnimation.getValue();
         float circleProgress = circleAnimation.getValue();
 
-        int offColor = ClickGuiLayout.getToggleOff(colorTheme);
+        int offColor = layout.getToggleOff(colorTheme);
         int onColor = colorTheme;
 
         int r = (int) ((offColor >> 16 & 255) + ((onColor >> 16 & 255) - (offColor >> 16 & 255)) * backgroundProgress);
@@ -87,12 +88,12 @@ public class ClickGuiSettingRenderer {
         int a = (int) ((offColor >> 24 & 255) + ((onColor >> 24 & 255) - (offColor >> 24 & 255)) * backgroundProgress);
         int interpolatedColor = (a << 24) | (r << 16) | (g << 8) | b;
 
-        float maxWidth = (panelX + ClickGuiLayout.SETTING_TEXT_MAX_RIGHT) - (panelX + ClickGuiLayout.SETTING_LEFT);
+        float maxWidth = (panelX + layout.getSettingTextMaxRight()) - (panelX + layout.getSettingLeft());
         drawStringWithHoverScroll(
                 issue(13),
                 context.getMatrices(),
                 booleanSetting.name(),
-                panelX + ClickGuiLayout.SETTING_LEFT,
+                panelX + layout.getSettingLeft(),
                 settingY,
                 maxWidth,
                 getPrimarySettingColor(alpha),
@@ -104,19 +105,19 @@ public class ClickGuiSettingRenderer {
 
         RenderUtils.drawRoundedRect(
                 context.getMatrices(),
-                panelX + ClickGuiLayout.BOOLEAN_TOGGLE_X,
+                panelX + layout.getBooleanToggleX(),
                 settingY - 2,
-                ClickGuiLayout.BOOLEAN_TOGGLE_W,
+                layout.getBooleanToggleW(),
                 9,
                 3.5f,
                 ColorUtils.rgba((interpolatedColor >> 16) & 255, (interpolatedColor >> 8) & 255, interpolatedColor & 255, alpha)
         );
 
-        float circleX = panelX + ClickGuiLayout.BOOLEAN_CIRCLE_START + (circleProgress * ClickGuiLayout.BOOLEAN_CIRCLE_TRAVEL);
+        float circleX = panelX + layout.getBooleanCircleStart() + (circleProgress * layout.getBooleanCircleTravel());
         RenderUtils.drawRoundCircle(context.getMatrices(), circleX + 0.5f, settingY + 2.5f, 7, ColorUtils.rgba(255, 255, 255, alpha));
     }
 
-    private void renderFloatSetting(DrawContext context, float panelX, float settingY, int alpha, int colorTheme, double mouseX, double mouseY, FloatSetting floatSetting, ClickGuiState state) {
+    private void renderFloatSetting(DrawContext context, float panelX, float settingY, int alpha, int colorTheme, double mouseX, double mouseY, FloatSetting floatSetting, ClickGuiState state, ClickGuiStyle layout) {
         if (floatSetting.isActive()) {
             floatSetting.setValue(state.updateActiveSliderValue(floatSetting, mouseX));
         }
@@ -126,14 +127,14 @@ public class ClickGuiSettingRenderer {
         float animatedPos = sliderAnimation.getValue();
 
         String valueString = formatSliderValue(floatSetting);
-        float valueX = panelX + ClickGuiLayout.SETTING_RIGHT - issue(12).getWidth(valueString);
-        float nameMaxWidth = (valueX - 4f) - (panelX + ClickGuiLayout.SETTING_LEFT);
+        float valueX = panelX + layout.getSettingRight() - issue(12).getWidth(valueString);
+        float nameMaxWidth = (valueX - 4f) - (panelX + layout.getSettingLeft());
 
         drawStringWithHoverScroll(
                 issue(12),
                 context.getMatrices(),
                 floatSetting.name(),
-                panelX + ClickGuiLayout.SETTING_LEFT,
+                panelX + layout.getSettingLeft(),
                 settingY + 1,
                 nameMaxWidth,
                 getPrimarySettingColor(alpha),
@@ -145,28 +146,28 @@ public class ClickGuiSettingRenderer {
 
         issue(12).drawString(context.getMatrices(), valueString, valueX, settingY + 1, ColorUtils.setAlphaColor(colorTheme, alpha));
 
-        int sliderBackgroundColor = ColorUtils.setAlphaColor(ClickGuiLayout.getSliderTrack(colorTheme), alpha);
-        RenderUtils.drawRoundedRect(context.getMatrices(), panelX + ClickGuiLayout.SETTING_LEFT, settingY + 9, ClickGuiLayout.SLIDER_WIDTH, 4.5f, 1.25f, sliderBackgroundColor);
+        int sliderBackgroundColor = ColorUtils.setAlphaColor(layout.getSliderTrack(colorTheme), alpha);
+        RenderUtils.drawRoundedRect(context.getMatrices(), panelX + layout.getSettingLeft(), settingY + 9, layout.getSliderWidth(), 4.5f, 1.25f, sliderBackgroundColor);
 
-        RenderUtils.drawGradientRect(context.getMatrices(), panelX + ClickGuiLayout.SETTING_LEFT, settingY + 9, animatedPos * ClickGuiLayout.SLIDER_WIDTH, 4.5f, 1.25f, ColorUtils.setAlphaColor(colorTheme, alpha), ColorUtils.setAlphaColor(ClickGuiLayout.getSecondaryAccent(colorTheme), alpha), true);
-        RenderUtils.drawRoundCircle(context.getMatrices(), panelX + ClickGuiLayout.SETTING_LEFT + animatedPos * ClickGuiLayout.SLIDER_WIDTH, settingY + 11.25f, 6, ColorUtils.setAlphaColor(-1, alpha));
+        RenderUtils.drawGradientRect(context.getMatrices(), panelX + layout.getSettingLeft(), settingY + 9, animatedPos * layout.getSliderWidth(), 4.5f, 1.25f, ColorUtils.setAlphaColor(colorTheme, alpha), ColorUtils.setAlphaColor(layout.getSecondaryAccent(colorTheme), alpha), true);
+        RenderUtils.drawRoundCircle(context.getMatrices(), panelX + layout.getSettingLeft() + animatedPos * layout.getSliderWidth(), settingY + 11.25f, 6, ColorUtils.setAlphaColor(-1, alpha));
     }
 
-    private void renderTextSetting(DrawContext context, float panelX, float settingY, int alpha, int colorTheme, double mouseX, double mouseY, TextSetting textSetting, ClickGuiState state) {
+    private void renderTextSetting(DrawContext context, float panelX, float settingY, int alpha, int colorTheme, double mouseX, double mouseY, TextSetting textSetting, ClickGuiState state, ClickGuiStyle layout) {
         String value = textSetting.get();
         boolean editing = state.getEditingTextSetting() == textSetting;
         String preview = value == null || value.isEmpty() ? "..." : value;
         String boxText = editing ? preview + "_" : preview;
-        float boxWidth = ClickGuiLayout.TEXT_SETTING_WIDTH;
-        float boxX = panelX + ClickGuiLayout.TEXT_BOX_X;
+        float boxWidth = layout.getTextSettingWidth();
+        float boxX = panelX + layout.getTextBoxX();
 
         drawStringWithHoverScroll(
                 issue(13),
                 context.getMatrices(),
                 textSetting.name(),
-                panelX + ClickGuiLayout.SETTING_LEFT,
+                panelX + layout.getSettingLeft(),
                 settingY,
-                (boxX - 1f) - (panelX + ClickGuiLayout.SETTING_LEFT),
+                (boxX - 1f) - (panelX + layout.getSettingLeft()),
                 getPrimarySettingColor(alpha),
                 mouseX,
                 mouseY,
@@ -174,8 +175,8 @@ public class ClickGuiSettingRenderer {
                 getSettingTextKey(textSetting)
         );
 
-        int background = ColorUtils.setAlphaColor(editing ? colorTheme : ClickGuiLayout.getSliderTrack(colorTheme), alpha);
-        int textColor = ColorUtils.setAlphaColor(editing ? -1 : ClickGuiLayout.TEXT_PRIMARY, alpha);
+        int background = ColorUtils.setAlphaColor(editing ? colorTheme : layout.getSliderTrack(colorTheme), alpha);
+        int textColor = ColorUtils.setAlphaColor(editing ? -1 : layout.getTextPrimary(), alpha);
         float boxY = settingY - 2.5f;
         RenderUtils.drawRoundedRect(context.getMatrices(), boxX, boxY, boxWidth, 9f, 1.5f, background);
         ScissorUtils.push();
@@ -184,14 +185,14 @@ public class ClickGuiSettingRenderer {
         ScissorUtils.pop();
     }
 
-    private void renderModeSetting(DrawContext context, float panelX, float settingY, int alpha, int colorTheme, double mouseX, double mouseY, ModeSetting modeSetting, ClickGuiState state) {
+    private void renderModeSetting(DrawContext context, float panelX, float settingY, int alpha, int colorTheme, double mouseX, double mouseY, ModeSetting modeSetting, ClickGuiState state, ClickGuiStyle layout) {
         drawStringWithHoverScroll(
                 issue(12),
                 context.getMatrices(),
                 modeSetting.name(),
-                panelX + ClickGuiLayout.SETTING_LEFT,
+                panelX + layout.getSettingLeft(),
                 settingY + 1,
-                ClickGuiLayout.SETTING_RIGHT - ClickGuiLayout.SETTING_LEFT,
+                layout.getSettingRight() - layout.getSettingLeft(),
                 getPrimarySettingColor(alpha),
                 mouseX,
                 mouseY,
@@ -207,24 +208,24 @@ public class ClickGuiSettingRenderer {
             float progress = animation.getValue();
 
             int outerColor = ColorUtils.setAlphaColor(colorTheme, (int) (alpha * (0.3f + 0.7f * progress)));
-            int innerColor = selected ? ColorUtils.setAlphaColor(ClickGuiLayout.getSecondaryAccent(colorTheme), alpha) : ColorUtils.rgba(255, 255, 255, alpha);
+            int innerColor = selected ? ColorUtils.setAlphaColor(layout.getSecondaryAccent(colorTheme), alpha) : ColorUtils.rgba(255, 255, 255, alpha);
 
-            issue(13).draw(context.getMatrices(), mode, panelX + ClickGuiLayout.SETTING_LEFT, modeY, getSecondarySettingColor(alpha));
-            RenderUtils.drawRoundCircle(context.getMatrices(), panelX + ClickGuiLayout.MODE_CIRCLE_X, modeY + 2, 9f, outerColor);
-            RenderUtils.drawRoundCircle(context.getMatrices(), panelX + ClickGuiLayout.MODE_CIRCLE_X, modeY + 2, (6f - (progress * 2f)) + 3f, innerColor);
+            issue(13).draw(context.getMatrices(), mode, panelX + layout.getSettingLeft(), modeY, getSecondarySettingColor(alpha));
+            RenderUtils.drawRoundCircle(context.getMatrices(), panelX + layout.getModeCircleX(), modeY + 2, 9f, outerColor);
+            RenderUtils.drawRoundCircle(context.getMatrices(), panelX + layout.getModeCircleX(), modeY + 2, (6f - (progress * 2f)) + 3f, innerColor);
 
             modeY += 10f;
         }
     }
 
-    private void renderListSetting(DrawContext context, float panelX, float settingY, int alpha, int colorTheme, double mouseX, double mouseY, ListSetting listSetting, ClickGuiState state) {
+    private void renderListSetting(DrawContext context, float panelX, float settingY, int alpha, int colorTheme, double mouseX, double mouseY, ListSetting listSetting, ClickGuiState state, ClickGuiStyle layout) {
         drawStringWithHoverScroll(
                 issue(12),
                 context.getMatrices(),
                 listSetting.name(),
-                panelX + ClickGuiLayout.SETTING_LEFT,
+                panelX + layout.getSettingLeft(),
                 settingY + 1,
-                ClickGuiLayout.SETTING_RIGHT - ClickGuiLayout.SETTING_LEFT,
+                layout.getSettingRight() - layout.getSettingLeft(),
                 getPrimarySettingColor(alpha),
                 mouseX,
                 mouseY,
@@ -244,29 +245,29 @@ public class ClickGuiSettingRenderer {
             float progress = animation.getValue();
 
             int outerColor = ColorUtils.setAlphaColor(colorTheme, (int) (alpha * (0.3f + 0.7f * progress)));
-            int innerColor = selected ? ColorUtils.setAlphaColor(ClickGuiLayout.getSecondaryAccent(colorTheme), alpha) : ColorUtils.rgba(255, 255, 255, alpha);
+            int innerColor = selected ? ColorUtils.setAlphaColor(layout.getSecondaryAccent(colorTheme), alpha) : ColorUtils.rgba(255, 255, 255, alpha);
 
             drawStringWithHoverScroll(
                     issue(13),
                     context.getMatrices(),
                     entry.name(),
-                    panelX + ClickGuiLayout.SETTING_LEFT,
+                    panelX + layout.getSettingLeft(),
                     listY,
-                    (panelX + ClickGuiLayout.SETTING_TEXT_MAX_RIGHT) - (panelX + ClickGuiLayout.SETTING_LEFT),
+                    (panelX + layout.getSettingTextMaxRight()) - (panelX + layout.getSettingLeft()),
                     getSecondarySettingColor(alpha),
                     mouseX,
                     mouseY,
                     state,
                     getListKey(listSetting, entry) + "_text"
             );
-            RenderUtils.drawRoundCircle(context.getMatrices(), panelX + ClickGuiLayout.LIST_CIRCLE_X, listY + 2, 9, outerColor);
-            RenderUtils.drawRoundCircle(context.getMatrices(), panelX + ClickGuiLayout.LIST_CIRCLE_X, listY + 2, (6f - (progress * 2f)) + 3f, innerColor);
+            RenderUtils.drawRoundCircle(context.getMatrices(), panelX + layout.getListCircleX(), listY + 2, 9, outerColor);
+            RenderUtils.drawRoundCircle(context.getMatrices(), panelX + layout.getListCircleX(), listY + 2, (6f - (progress * 2f)) + 3f, innerColor);
 
             listY += 10f;
         }
     }
 
-    private void renderBindSetting(DrawContext context, float panelX, float settingY, int alpha, int colorTheme, double mouseX, double mouseY, BindSetting bindSetting, ClickGuiState state) {
+    private void renderBindSetting(DrawContext context, float panelX, float settingY, int alpha, int colorTheme, double mouseX, double mouseY, BindSetting bindSetting, ClickGuiState state, ClickGuiStyle layout) {
         boolean binding = state.getBindingSetting() == bindSetting;
         AnimationUtils bindAnimation = state.getBindAnimation(getBindKey(bindSetting), binding);
         bindAnimation.update(binding ? 1f : 0f);
@@ -275,13 +276,13 @@ public class ClickGuiSettingRenderer {
         String bindString = binding ? "..." : state.toEnglish(KeyBoardUtils.getBindName(bindSetting.getKey()));
         float bindTextWidth = issue(12).getWidth(bindString);
         float bindWidth = bindTextWidth + 6f;
-        float bindX = panelX + ClickGuiLayout.SETTING_RIGHT - bindWidth;
+        float bindX = panelX + layout.getSettingRight() - bindWidth;
 
         int bindBackgroundColor = ColorUtils.setAlphaColor(
-                ColorUtils.interpolateColor(ClickGuiLayout.getSliderTrack(colorTheme), colorTheme, progress),
+                ColorUtils.interpolateColor(layout.getSliderTrack(colorTheme), colorTheme, progress),
                 alpha
         );
-        int bindTextColor = ColorUtils.setAlphaColor(ColorUtils.interpolateColor(ClickGuiLayout.TEXT_SECONDARY, -1, progress), alpha);
+        int bindTextColor = ColorUtils.setAlphaColor(ColorUtils.interpolateColor(layout.getTextSecondary(), -1, progress), alpha);
 
         RenderUtils.drawRoundedRect(context.getMatrices(), bindX, settingY - 2.5f, bindWidth, 9, 1.5f, bindBackgroundColor);
         issue(12).drawString(context.getMatrices(), bindString, bindX + 3, settingY + 1, bindTextColor);
@@ -289,9 +290,9 @@ public class ClickGuiSettingRenderer {
                 issue(12),
                 context.getMatrices(),
                 bindSetting.name(),
-                panelX + ClickGuiLayout.SETTING_LEFT,
+                panelX + layout.getSettingLeft(),
                 settingY + 1,
-                (bindX - 4f) - (panelX + ClickGuiLayout.SETTING_LEFT),
+                (bindX - 4f) - (panelX + layout.getSettingLeft()),
                 getPrimarySettingColor(alpha),
                 mouseX,
                 mouseY,

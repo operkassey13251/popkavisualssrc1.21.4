@@ -25,7 +25,6 @@ import java.util.List;
 import java.util.Map;
 
 public class ClickGuiConfigPanel implements QClient {
-    private static final float PANEL_GAP = ClickGuiLayout.CATEGORY_PANEL_STEP;
     private static final float SLIDE_DISTANCE = 220f;
     private static final float HEADER_HEIGHT = 24f;
     private static final float SEPARATOR_Y = 23f;
@@ -77,6 +76,10 @@ public class ClickGuiConfigPanel implements QClient {
         this.state = state;
     }
 
+    private ClickGuiStyle layout() {
+        return state.getStyle();
+    }
+
     public void update(boolean closing) {
         if (closing) {
             slideAnimation.setEasing(Easings.CUBIC_IN);
@@ -121,31 +124,31 @@ public class ClickGuiConfigPanel implements QClient {
         float panelX = getPanelX();
         float panelY = getPanelY();
 
-        RenderUtils.drawRoundedRect(context.getMatrices(), panelX, panelY, ClickGuiLayout.WIDTH, ClickGuiLayout.HEIGHT, ClickGuiLayout.PANEL_RADIUS, alpha(ClickGuiLayout.getPanelBg(colorTheme), alphaMul));
-        RenderUtils.drawGradientRect(context.getMatrices(), panelX, panelY, ClickGuiLayout.WIDTH, HEADER_HEIGHT, ClickGuiLayout.PANEL_RADIUS, alpha(ClickGuiLayout.getPanelHeaderBg(colorTheme), alphaMul), alpha(ClickGuiLayout.getPanelBg(colorTheme), alphaMul));
-        RenderUtils.drawRoundedRect(context.getMatrices(), panelX, panelY + SEPARATOR_Y, ClickGuiLayout.WIDTH, 0.5F, 0, alpha(ClickGuiLayout.getSeparator(colorTheme), alphaMul));
+        RenderUtils.drawRoundedRect(context.getMatrices(), panelX, panelY, layout().getWidth(), layout().getHeight(), layout().getPanelRadius(), alpha(layout().getPanelBg(colorTheme), alphaMul));
+        RenderUtils.drawGradientRect(context.getMatrices(), panelX, panelY, layout().getWidth(), HEADER_HEIGHT, layout().getPanelRadius(), alpha(layout().getPanelHeaderBg(colorTheme), alphaMul), alpha(layout().getPanelBg(colorTheme), alphaMul));
+        RenderUtils.drawRoundedRect(context.getMatrices(), panelX, panelY + SEPARATOR_Y, layout().getWidth(), 0.5F, 0, alpha(layout().getSeparator(colorTheme), alphaMul));
         if (((shadeColor >> 24) & 0xFF) > 0) {
-            RenderUtils.drawRoundedRect(context.getMatrices(), panelX, panelY, ClickGuiLayout.WIDTH, ClickGuiLayout.HEIGHT, ClickGuiLayout.PANEL_RADIUS, shadeColor);
+            RenderUtils.drawRoundedRect(context.getMatrices(), panelX, panelY, layout().getWidth(), layout().getHeight(), layout().getPanelRadius(), shadeColor);
         }
 
-        float headerIconX = panelX + ClickGuiLayout.HEADER_CENTER_ICON - (issue(15).getWidth(HEADER_NAME) / 2F) - 2;
+        float headerIconX = panelX + layout().getHeaderCenterIcon() - (issue(15).getWidth(HEADER_NAME) / 2F) - 2;
         icons(14).drawCenteredString(context.getMatrices(), HEADER_ICON, headerIconX, panelY + 10, alpha(colorTheme, alphaMul));
-        issue(15).drawCenteredString(context.getMatrices(), HEADER_NAME, panelX + ClickGuiLayout.HEADER_CENTER_TEXT, panelY + 9, alpha(ClickGuiLayout.TEXT_PRIMARY, alphaMul));
+        issue(15).drawCenteredString(context.getMatrices(), HEADER_NAME, panelX + layout().getHeaderCenterText(), panelY + 9, alpha(layout().getTextPrimary(), alphaMul));
 
         refreshConfigs();
 
         float listTop = panelY + CONTENT_TOP;
-        float buttonAreaTop = panelY + ClickGuiLayout.HEIGHT - BUTTON_AREA_HEIGHT - CONTENT_BOTTOM_PADDING;
+        float buttonAreaTop = panelY + layout().getHeight() - BUTTON_AREA_HEIGHT - CONTENT_BOTTOM_PADDING;
         float listHeight = buttonAreaTop - listTop - 2f;
 
         clampScroll(listHeight);
         scrollAnimation.update(scrollTarget);
         float scroll = scrollAnimation.getValue();
 
-        RenderUtils.drawRoundedRect(context.getMatrices(), panelX + ClickGuiLayout.MODULE_PADDING, buttonAreaTop - 1.5f, ClickGuiLayout.MODULE_INNER_WIDTH, 0.5f, 0, alpha(ClickGuiLayout.getSeparator(colorTheme), alphaMul));
+        RenderUtils.drawRoundedRect(context.getMatrices(), panelX + layout().getModulePadding(), buttonAreaTop - 1.5f, layout().getModuleInnerWidth(), 0.5f, 0, alpha(layout().getSeparator(colorTheme), alphaMul));
 
         ScissorUtils.push();
-        ScissorUtils.setFromComponentCoordinates(panelX, listTop, ClickGuiLayout.WIDTH, listHeight);
+        ScissorUtils.setFromComponentCoordinates(panelX, listTop, layout().getWidth(), listHeight);
 
         float rowY = listTop + scroll;
         String currentConfig = Popka.INSTANCE.configStorage.currentConfig;
@@ -165,7 +168,7 @@ public class ClickGuiConfigPanel implements QClient {
 
         boolean canHover = slide > 0.98f;
         for (int i = 0; i < count; i++) {
-            boolean isHovered = canHover && HoveringUtils.isHovered(mouseX, mouseY, panelX + ClickGuiLayout.MODULE_PADDING, rowYs[i] - 0.5f, ClickGuiLayout.MODULE_INNER_WIDTH, rowHeights[i] + 1f);
+            boolean isHovered = canHover && HoveringUtils.isHovered(mouseX, mouseY, panelX + layout().getModulePadding(), rowYs[i] - 0.5f, layout().getModuleInnerWidth(), rowHeights[i] + 1f);
             AnimationUtils anim = getConfigHoverAnimation(cachedConfigs.get(i), isHovered);
             anim.update(isHovered ? 1f : 0f);
             hovers[i] = anim.getValue();
@@ -199,13 +202,13 @@ public class ClickGuiConfigPanel implements QClient {
         float intensity = isCurrent ? 1.0f : hover;
 
         if (intensity > 0.01f) {
-            int bgTop = ColorUtils.applyAlpha(ClickGuiLayout.getModuleEnabledBgTop(colorTheme), alphaMul * intensity);
-            int bgBottom = ColorUtils.applyAlpha(ClickGuiLayout.getModuleEnabledBgBottom(colorTheme), alphaMul * intensity);
-            RenderUtils.drawRoundedRect(context.getMatrices(), panelX + ClickGuiLayout.MODULE_PADDING, rowY - 0.5f, ClickGuiLayout.MODULE_INNER_WIDTH, rowHeight + 1, 4, bgBottom);
-            RenderUtils.drawGradientRect(context.getMatrices(), panelX + ClickGuiLayout.MODULE_PADDING + 0.5f, rowY, ClickGuiLayout.MODULE_INNER_WIDTH - 1f, rowHeight, 4, bgTop, bgBottom, false);
+            int bgTop = ColorUtils.applyAlpha(layout().getModuleEnabledBgTop(colorTheme), alphaMul * intensity);
+            int bgBottom = ColorUtils.applyAlpha(layout().getModuleEnabledBgBottom(colorTheme), alphaMul * intensity);
+            RenderUtils.drawRoundedRect(context.getMatrices(), panelX + layout().getModulePadding(), rowY - 0.5f, layout().getModuleInnerWidth(), rowHeight + 1, 4, bgBottom);
+            RenderUtils.drawGradientRect(context.getMatrices(), panelX + layout().getModulePadding() + 0.5f, rowY, layout().getModuleInnerWidth() - 1f, rowHeight, 4, bgTop, bgBottom, false);
         }
 
-        int nameColor = isCurrent ? alpha(colorTheme, alphaMul) : alpha(ClickGuiLayout.TEXT_PRIMARY, alphaMul);
+        int nameColor = isCurrent ? alpha(colorTheme, alphaMul) : alpha(layout().getTextPrimary(), alphaMul);
         String displayName = truncateName(name, CONFIG_DOT_X - 2f - CONFIG_NAME_LEFT);
         issue(13).draw(context.getMatrices(), displayName, panelX + CONFIG_NAME_LEFT, rowY + 5f, nameColor);
 
@@ -226,7 +229,7 @@ public class ClickGuiConfigPanel implements QClient {
     }
 
     private float getRowButtonsLeft() {
-        return ClickGuiLayout.MODULE_PADDING + (ClickGuiLayout.MODULE_INNER_WIDTH - (3 * ROW_BTN_WIDTH + 2 * ROW_BTN_GAP)) / 2f;
+        return layout().getModulePadding() + (layout().getModuleInnerWidth() - (3 * ROW_BTN_WIDTH + 2 * ROW_BTN_GAP)) / 2f;
     }
 
     private void renderRowButton(DrawContext context, int mouseX, int mouseY, float x, float y, String label, String hoverKey, int colorTheme, float alphaMul) {
@@ -235,18 +238,18 @@ public class ClickGuiConfigPanel implements QClient {
         hoverAnim.update(hovered ? 1f : 0f);
         float hover = hoverAnim.getValue();
 
-        int bgColor = ColorUtils.applyAlpha(ClickGuiLayout.getSliderTrack(colorTheme), alphaMul * (0.55f + 0.45f * hover));
-        int borderColor = ColorUtils.applyAlpha(ClickGuiLayout.getBorderLight(colorTheme), alphaMul * (0.4f + 0.6f * hover));
+        int bgColor = ColorUtils.applyAlpha(layout().getSliderTrack(colorTheme), alphaMul * (0.55f + 0.45f * hover));
+        int borderColor = ColorUtils.applyAlpha(layout().getBorderLight(colorTheme), alphaMul * (0.4f + 0.6f * hover));
         RenderUtils.drawRoundedRect(context.getMatrices(), x - 0.5f, y - 0.5f, ROW_BTN_WIDTH + 1f, ROW_BTN_HEIGHT + 1f, 3.5f, borderColor);
         RenderUtils.drawRoundedRect(context.getMatrices(), x, y, ROW_BTN_WIDTH, ROW_BTN_HEIGHT, 3f, bgColor);
 
-        int textColor = ColorUtils.applyAlpha(ClickGuiLayout.TEXT_PRIMARY, alphaMul * (0.8f + 0.2f * hover));
+        int textColor = ColorUtils.applyAlpha(layout().getTextPrimary(), alphaMul * (0.8f + 0.2f * hover));
         issue(10).drawCenteredString(context.getMatrices(), label, x + ROW_BTN_WIDTH / 2f, y + 4f, textColor);
     }
 
     private void renderButtons(DrawContext context, int mouseX, int mouseY, float panelX, float buttonAreaTop, int colorTheme, float alphaMul) {
         float pairWidth = 2 * BUTTON_WIDTH + BUTTON_GAP;
-        float leftX = panelX + ClickGuiLayout.MODULE_PADDING + (ClickGuiLayout.MODULE_INNER_WIDTH - pairWidth) / 2f;
+        float leftX = panelX + layout().getModulePadding() + (layout().getModuleInnerWidth() - pairWidth) / 2f;
         float rightX = leftX + BUTTON_WIDTH + BUTTON_GAP;
         float buttonY = buttonAreaTop + (BUTTON_AREA_HEIGHT - BUTTON_HEIGHT) / 2f;
         float[][] positions = {
@@ -263,22 +266,22 @@ public class ClickGuiConfigPanel implements QClient {
             hoverAnim.update(hovered ? 1f : 0f);
             float hover = hoverAnim.getValue();
 
-            int bgColor = ColorUtils.applyAlpha(ClickGuiLayout.getSliderTrack(colorTheme), alphaMul * (0.6f + 0.4f * hover));
-            int borderColor = ColorUtils.applyAlpha(ClickGuiLayout.getBorderLight(colorTheme), alphaMul * (0.5f + 0.5f * hover));
+            int bgColor = ColorUtils.applyAlpha(layout().getSliderTrack(colorTheme), alphaMul * (0.6f + 0.4f * hover));
+            int borderColor = ColorUtils.applyAlpha(layout().getBorderLight(colorTheme), alphaMul * (0.5f + 0.5f * hover));
             RenderUtils.drawRoundedRect(context.getMatrices(), bx - 0.5f, by - 0.5f, BUTTON_WIDTH + 1f, BUTTON_HEIGHT + 1f, 4f, borderColor);
             RenderUtils.drawRoundedRect(context.getMatrices(), bx, by, BUTTON_WIDTH, BUTTON_HEIGHT, 3.5f, bgColor);
 
-            int textColor = ColorUtils.applyAlpha(ClickGuiLayout.TEXT_PRIMARY, alphaMul * (0.85f + 0.15f * hover));
+            int textColor = ColorUtils.applyAlpha(layout().getTextPrimary(), alphaMul * (0.85f + 0.15f * hover));
             issue(12).drawCenteredString(context.getMatrices(), label, bx + BUTTON_WIDTH / 2f, by + 5f, textColor);
         }
     }
 
     private void renderTextInput(DrawContext context, float panelX, float overlayY, int colorTheme, float alphaMul) {
-        float overlayX = panelX + ClickGuiLayout.MODULE_PADDING;
-        float overlayW = ClickGuiLayout.MODULE_INNER_WIDTH;
+        float overlayX = panelX + layout().getModulePadding();
+        float overlayW = layout().getModuleInnerWidth();
         float overlayH = TEXT_INPUT_HEIGHT;
 
-        RenderUtils.drawRoundedRect(context.getMatrices(), overlayX, overlayY, overlayW, overlayH, 4f, ColorUtils.applyAlpha(ClickGuiLayout.getSliderTrack(colorTheme), alphaMul * 0.95f));
+        RenderUtils.drawRoundedRect(context.getMatrices(), overlayX, overlayY, overlayW, overlayH, 4f, ColorUtils.applyAlpha(layout().getSliderTrack(colorTheme), alphaMul * 0.95f));
 
         float fieldX = overlayX + 4f;
         float fieldY = overlayY + 4f;
@@ -290,10 +293,10 @@ public class ClickGuiConfigPanel implements QClient {
         ScissorUtils.setFromComponentCoordinates(fieldX + 2f, fieldY + 1f, fieldW - 4f, fieldH - 2f);
 
         String displayText = textInputBuffer;
-        int textCol = alpha(ClickGuiLayout.TEXT_WHITE, alphaMul);
+        int textCol = alpha(layout().getTextWhite(), alphaMul);
         if (displayText.isEmpty()) {
             displayText = renaming ? "rename..." : "new config...";
-            textCol = alpha(ClickGuiLayout.TEXT_SECONDARY, alphaMul);
+            textCol = alpha(layout().getTextSecondary(), alphaMul);
         } else if ((System.currentTimeMillis() / 500L) % 2L == 0L) {
             displayText = displayText + "_";
         }
@@ -313,7 +316,7 @@ public class ClickGuiConfigPanel implements QClient {
         float panelX = getPanelX();
         float panelY = getPanelY();
 
-        boolean onPanel = HoveringUtils.isHovered(mouseX, mouseY, panelX, panelY, ClickGuiLayout.WIDTH, ClickGuiLayout.HEIGHT);
+        boolean onPanel = HoveringUtils.isHovered(mouseX, mouseY, panelX, panelY, layout().getWidth(), layout().getHeight());
 
         if (textInputActive) {
             if (!onPanel) {
@@ -326,9 +329,9 @@ public class ClickGuiConfigPanel implements QClient {
             return false;
         }
 
-        float buttonAreaTop = panelY + ClickGuiLayout.HEIGHT - BUTTON_AREA_HEIGHT - CONTENT_BOTTOM_PADDING;
+        float buttonAreaTop = panelY + layout().getHeight() - BUTTON_AREA_HEIGHT - CONTENT_BOTTOM_PADDING;
         float pairWidth = 2 * BUTTON_WIDTH + BUTTON_GAP;
-        float leftX = panelX + ClickGuiLayout.MODULE_PADDING + (ClickGuiLayout.MODULE_INNER_WIDTH - pairWidth) / 2f;
+        float leftX = panelX + layout().getModulePadding() + (layout().getModuleInnerWidth() - pairWidth) / 2f;
         float rightX = leftX + BUTTON_WIDTH + BUTTON_GAP;
         float buttonY = buttonAreaTop + (BUTTON_AREA_HEIGHT - BUTTON_HEIGHT) / 2f;
         float[][] positions = {
@@ -347,14 +350,14 @@ public class ClickGuiConfigPanel implements QClient {
 
         float listTop = panelY + CONTENT_TOP;
         float listHeight = buttonAreaTop - listTop - 2f;
-        if (HoveringUtils.isHovered(mouseX, mouseY, panelX, listTop, ClickGuiLayout.WIDTH, listHeight)) {
+        if (HoveringUtils.isHovered(mouseX, mouseY, panelX, listTop, layout().getWidth(), listHeight)) {
             scrollAnimation.update(scrollTarget);
             float scroll = scrollAnimation.getValue();
             float rowY = listTop + scroll;
             for (String configName : cachedConfigs) {
                 float h = getConfigHoverAnimation(configName, false).getValue();
                 float rowHeight = CONFIG_ROW_HEIGHT + h * EXPANSION_EXTRA;
-                if (HoveringUtils.isHovered(mouseX, mouseY, panelX + ClickGuiLayout.MODULE_PADDING, rowY - 0.5f, ClickGuiLayout.MODULE_INNER_WIDTH, rowHeight + 1f)) {
+                if (HoveringUtils.isHovered(mouseX, mouseY, panelX + layout().getModulePadding(), rowY - 0.5f, layout().getModuleInnerWidth(), rowHeight + 1f)) {
                     if (h > 0.5f) {
                         float expansion = h * EXPANSION_EXTRA;
                         float btnY = rowY + CONFIG_ROW_HEIGHT + (expansion - ROW_BTN_HEIGHT) / 2f;
@@ -405,10 +408,10 @@ public class ClickGuiConfigPanel implements QClient {
         float panelX = getPanelX();
         float panelY = getPanelY();
         float listTop = panelY + CONTENT_TOP;
-        float buttonAreaTop = panelY + ClickGuiLayout.HEIGHT - BUTTON_AREA_HEIGHT - CONTENT_BOTTOM_PADDING;
+        float buttonAreaTop = panelY + layout().getHeight() - BUTTON_AREA_HEIGHT - CONTENT_BOTTOM_PADDING;
         float listHeight = buttonAreaTop - listTop - 2f;
 
-        if (HoveringUtils.isHovered(mouseX, mouseY, panelX, listTop, ClickGuiLayout.WIDTH, listHeight)) {
+        if (HoveringUtils.isHovered(mouseX, mouseY, panelX, listTop, layout().getWidth(), listHeight)) {
             scrollTarget += (float) (verticalAmount * 20);
             clampScroll(listHeight);
             return true;
