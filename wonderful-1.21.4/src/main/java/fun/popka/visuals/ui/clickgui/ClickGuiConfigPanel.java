@@ -9,6 +9,7 @@ import fun.popka.Popka;
 import fun.popka.api.QClient;
 import fun.popka.api.utils.animation.AnimationUtils;
 import fun.popka.api.utils.animation.Easings;
+import fun.popka.api.utils.chat.ChatUtils;
 import fun.popka.api.utils.color.ColorUtils;
 import fun.popka.api.utils.math.HoveringUtils;
 import fun.popka.api.utils.notification.NotificationManager;
@@ -30,13 +31,16 @@ public class ClickGuiConfigPanel implements QClient {
     private static final float SEPARATOR_Y = 23f;
     private static final float CONTENT_TOP = 25f;
     private static final float CONTENT_BOTTOM_PADDING = 4f;
-    private static final float BUTTON_AREA_HEIGHT = 26f;
-    private static final float BUTTON_HEIGHT = 18f;
+    private static final float BUTTON_AREA_HEIGHT = 20f;
+    private static final float BUTTON_HEIGHT = 13f;
     private static final float BUTTON_GAP = 4f;
+    private static final float BUTTON_WIDTH = 38f;
+    private static final float TEXT_INPUT_HEIGHT = 22f;
+    private static final float TEXT_INPUT_GAP = 3f;
     private static final float CONFIG_ROW_HEIGHT = 14f;
     private static final float CONFIG_ROW_GAP = 2f;
-    private static final float ROW_BTN_WIDTH = 40f;
-    private static final float ROW_BTN_HEIGHT = 13f;
+    private static final float ROW_BTN_WIDTH = 30f;
+    private static final float ROW_BTN_HEIGHT = 12f;
     private static final float ROW_BTN_GAP = 2f;
     private static final float EXPANSION_EXTRA = 18f;
     private static final float CONFIG_NAME_LEFT = 6f;
@@ -46,7 +50,7 @@ public class ClickGuiConfigPanel implements QClient {
     private static final long DOUBLE_CLICK_MS = 350L;
     private static final String HEADER_NAME = "Configs";
     private static final String HEADER_ICON = "f";
-    private static final String CONFIG_EXTENSION = ".wonder";
+    private static final String CONFIG_EXTENSION = ".popka";
     private static final int DOT_RED = ColorUtils.rgb(205, 65, 65);
     private static final int DOT_GREEN = ColorUtils.rgb(70, 200, 110);
 
@@ -89,7 +93,7 @@ public class ClickGuiConfigPanel implements QClient {
     }
 
     public float getRestingX() {
-        return state.getX() - PANEL_GAP;
+        return 6f;
     }
 
     public float getPanelX() {
@@ -159,8 +163,9 @@ public class ClickGuiConfigPanel implements QClient {
             rowY += rowHeights[i] + CONFIG_ROW_GAP;
         }
 
+        boolean canHover = slide > 0.98f;
         for (int i = 0; i < count; i++) {
-            boolean isHovered = HoveringUtils.isHovered(mouseX, mouseY, panelX + ClickGuiLayout.MODULE_PADDING, rowYs[i], ClickGuiLayout.MODULE_INNER_WIDTH, rowHeights[i]);
+            boolean isHovered = canHover && HoveringUtils.isHovered(mouseX, mouseY, panelX + ClickGuiLayout.MODULE_PADDING, rowYs[i] - 0.5f, ClickGuiLayout.MODULE_INNER_WIDTH, rowHeights[i] + 1f);
             AnimationUtils anim = getConfigHoverAnimation(cachedConfigs.get(i), isHovered);
             anim.update(isHovered ? 1f : 0f);
             hovers[i] = anim.getValue();
@@ -183,10 +188,10 @@ public class ClickGuiConfigPanel implements QClient {
 
         ScissorUtils.pop();
 
-        if (!textInputActive) {
-            renderButtons(context, mouseX, mouseY, panelX, buttonAreaTop, colorTheme, alphaMul);
-        } else {
-            renderTextInput(context, panelX, buttonAreaTop, colorTheme, alphaMul);
+        renderButtons(context, mouseX, mouseY, panelX, buttonAreaTop, colorTheme, alphaMul);
+        if (textInputActive) {
+            float textInputY = buttonAreaTop - TEXT_INPUT_HEIGHT - TEXT_INPUT_GAP;
+            renderTextInput(context, panelX, textInputY, colorTheme, alphaMul);
         }
     }
 
@@ -211,15 +216,17 @@ public class ClickGuiConfigPanel implements QClient {
             float expansion = hover * EXPANSION_EXTRA;
             float btnY = rowY + CONFIG_ROW_HEIGHT + (expansion - ROW_BTN_HEIGHT) / 2f;
             float leftX = panelX + getRowButtonsLeft();
-            float renameX = leftX;
-            float deleteX = leftX + ROW_BTN_WIDTH + ROW_BTN_GAP;
+            float loadX = leftX;
+            float renameX = leftX + ROW_BTN_WIDTH + ROW_BTN_GAP;
+            float deleteX = renameX + ROW_BTN_WIDTH + ROW_BTN_GAP;
+            renderRowButton(context, mouseX, mouseY, loadX, btnY, "Load", name + ":load", colorTheme, alphaMul * hover);
             renderRowButton(context, mouseX, mouseY, renameX, btnY, "Rename", name + ":rename", colorTheme, alphaMul * hover);
             renderRowButton(context, mouseX, mouseY, deleteX, btnY, "Delete", name + ":delete", colorTheme, alphaMul * hover);
         }
     }
 
     private float getRowButtonsLeft() {
-        return ClickGuiLayout.MODULE_PADDING + (ClickGuiLayout.MODULE_INNER_WIDTH - (2 * ROW_BTN_WIDTH + ROW_BTN_GAP)) / 2f;
+        return ClickGuiLayout.MODULE_PADDING + (ClickGuiLayout.MODULE_INNER_WIDTH - (3 * ROW_BTN_WIDTH + 2 * ROW_BTN_GAP)) / 2f;
     }
 
     private void renderRowButton(DrawContext context, int mouseX, int mouseY, float x, float y, String label, String hoverKey, int colorTheme, float alphaMul) {
@@ -234,42 +241,42 @@ public class ClickGuiConfigPanel implements QClient {
         RenderUtils.drawRoundedRect(context.getMatrices(), x, y, ROW_BTN_WIDTH, ROW_BTN_HEIGHT, 3f, bgColor);
 
         int textColor = ColorUtils.applyAlpha(ClickGuiLayout.TEXT_PRIMARY, alphaMul * (0.8f + 0.2f * hover));
-        issue(11).drawCenteredString(context.getMatrices(), label, x + ROW_BTN_WIDTH / 2f, y + 4.5f, textColor);
+        issue(10).drawCenteredString(context.getMatrices(), label, x + ROW_BTN_WIDTH / 2f, y + 4f, textColor);
     }
 
     private void renderButtons(DrawContext context, int mouseX, int mouseY, float panelX, float buttonAreaTop, int colorTheme, float alphaMul) {
-        float buttonWidth = (ClickGuiLayout.MODULE_INNER_WIDTH - BUTTON_GAP) / 2f;
-        float leftX = panelX + ClickGuiLayout.MODULE_PADDING;
-        float rightX = leftX + buttonWidth + BUTTON_GAP;
+        float pairWidth = 2 * BUTTON_WIDTH + BUTTON_GAP;
+        float leftX = panelX + ClickGuiLayout.MODULE_PADDING + (ClickGuiLayout.MODULE_INNER_WIDTH - pairWidth) / 2f;
+        float rightX = leftX + BUTTON_WIDTH + BUTTON_GAP;
+        float buttonY = buttonAreaTop + (BUTTON_AREA_HEIGHT - BUTTON_HEIGHT) / 2f;
         float[][] positions = {
-                {leftX, buttonAreaTop},
-                {rightX, buttonAreaTop}
+                {leftX, buttonY},
+                {rightX, buttonY}
         };
 
         for (int i = 0; i < BUTTON_LABELS.length; i++) {
             String label = BUTTON_LABELS[i];
             float bx = positions[i][0];
             float by = positions[i][1];
-            boolean hovered = HoveringUtils.isHovered(mouseX, mouseY, bx, by, buttonWidth, BUTTON_HEIGHT);
+            boolean hovered = HoveringUtils.isHovered(mouseX, mouseY, bx, by, BUTTON_WIDTH, BUTTON_HEIGHT);
             AnimationUtils hoverAnim = getButtonHoverAnimation(label, hovered);
             hoverAnim.update(hovered ? 1f : 0f);
             float hover = hoverAnim.getValue();
 
             int bgColor = ColorUtils.applyAlpha(ClickGuiLayout.getSliderTrack(colorTheme), alphaMul * (0.6f + 0.4f * hover));
             int borderColor = ColorUtils.applyAlpha(ClickGuiLayout.getBorderLight(colorTheme), alphaMul * (0.5f + 0.5f * hover));
-            RenderUtils.drawRoundedRect(context.getMatrices(), bx - 0.5f, by - 0.5f, buttonWidth + 1f, BUTTON_HEIGHT + 1f, 4.5f, borderColor);
-            RenderUtils.drawRoundedRect(context.getMatrices(), bx, by, buttonWidth, BUTTON_HEIGHT, 4f, bgColor);
+            RenderUtils.drawRoundedRect(context.getMatrices(), bx - 0.5f, by - 0.5f, BUTTON_WIDTH + 1f, BUTTON_HEIGHT + 1f, 4f, borderColor);
+            RenderUtils.drawRoundedRect(context.getMatrices(), bx, by, BUTTON_WIDTH, BUTTON_HEIGHT, 3.5f, bgColor);
 
             int textColor = ColorUtils.applyAlpha(ClickGuiLayout.TEXT_PRIMARY, alphaMul * (0.85f + 0.15f * hover));
-            issue(13).drawCenteredString(context.getMatrices(), label, bx + buttonWidth / 2f, by + 7.2f, textColor);
+            issue(12).drawCenteredString(context.getMatrices(), label, bx + BUTTON_WIDTH / 2f, by + 5f, textColor);
         }
     }
 
-    private void renderTextInput(DrawContext context, float panelX, float buttonAreaTop, int colorTheme, float alphaMul) {
+    private void renderTextInput(DrawContext context, float panelX, float overlayY, int colorTheme, float alphaMul) {
         float overlayX = panelX + ClickGuiLayout.MODULE_PADDING;
-        float overlayY = buttonAreaTop;
         float overlayW = ClickGuiLayout.MODULE_INNER_WIDTH;
-        float overlayH = BUTTON_AREA_HEIGHT;
+        float overlayH = TEXT_INPUT_HEIGHT;
 
         RenderUtils.drawRoundedRect(context.getMatrices(), overlayX, overlayY, overlayW, overlayH, 4f, ColorUtils.applyAlpha(ClickGuiLayout.getSliderTrack(colorTheme), alphaMul * 0.95f));
 
@@ -320,18 +327,19 @@ public class ClickGuiConfigPanel implements QClient {
         }
 
         float buttonAreaTop = panelY + ClickGuiLayout.HEIGHT - BUTTON_AREA_HEIGHT - CONTENT_BOTTOM_PADDING;
-        float buttonWidth = (ClickGuiLayout.MODULE_INNER_WIDTH - BUTTON_GAP) / 2f;
-        float leftX = panelX + ClickGuiLayout.MODULE_PADDING;
-        float rightX = leftX + buttonWidth + BUTTON_GAP;
+        float pairWidth = 2 * BUTTON_WIDTH + BUTTON_GAP;
+        float leftX = panelX + ClickGuiLayout.MODULE_PADDING + (ClickGuiLayout.MODULE_INNER_WIDTH - pairWidth) / 2f;
+        float rightX = leftX + BUTTON_WIDTH + BUTTON_GAP;
+        float buttonY = buttonAreaTop + (BUTTON_AREA_HEIGHT - BUTTON_HEIGHT) / 2f;
         float[][] positions = {
-                {leftX, buttonAreaTop},
-                {rightX, buttonAreaTop}
+                {leftX, buttonY},
+                {rightX, buttonY}
         };
 
         for (int i = 0; i < BUTTON_LABELS.length; i++) {
             float bx = positions[i][0];
             float by = positions[i][1];
-            if (HoveringUtils.isHovered(mouseX, mouseY, bx, by, buttonWidth, BUTTON_HEIGHT)) {
+            if (HoveringUtils.isHovered(mouseX, mouseY, bx, by, BUTTON_WIDTH, BUTTON_HEIGHT)) {
                 handleButtonClick(BUTTON_LABELS[i]);
                 return true;
             }
@@ -346,13 +354,18 @@ public class ClickGuiConfigPanel implements QClient {
             for (String configName : cachedConfigs) {
                 float h = getConfigHoverAnimation(configName, false).getValue();
                 float rowHeight = CONFIG_ROW_HEIGHT + h * EXPANSION_EXTRA;
-                if (HoveringUtils.isHovered(mouseX, mouseY, panelX + ClickGuiLayout.MODULE_PADDING, rowY, ClickGuiLayout.MODULE_INNER_WIDTH, rowHeight)) {
+                if (HoveringUtils.isHovered(mouseX, mouseY, panelX + ClickGuiLayout.MODULE_PADDING, rowY - 0.5f, ClickGuiLayout.MODULE_INNER_WIDTH, rowHeight + 1f)) {
                     if (h > 0.5f) {
                         float expansion = h * EXPANSION_EXTRA;
                         float btnY = rowY + CONFIG_ROW_HEIGHT + (expansion - ROW_BTN_HEIGHT) / 2f;
                         float rowLeftX = panelX + getRowButtonsLeft();
-                        float renameX = rowLeftX;
-                        float deleteX = rowLeftX + ROW_BTN_WIDTH + ROW_BTN_GAP;
+                        float loadX = rowLeftX;
+                        float renameX = rowLeftX + ROW_BTN_WIDTH + ROW_BTN_GAP;
+                        float deleteX = renameX + ROW_BTN_WIDTH + ROW_BTN_GAP;
+                        if (HoveringUtils.isHovered(mouseX, mouseY, loadX, btnY, ROW_BTN_WIDTH, ROW_BTN_HEIGHT)) {
+                            loadConfig(configName);
+                            return true;
+                        }
                         if (HoveringUtils.isHovered(mouseX, mouseY, renameX, btnY, ROW_BTN_WIDTH, ROW_BTN_HEIGHT)) {
                             startRename(configName);
                             return true;
@@ -483,16 +496,20 @@ public class ClickGuiConfigPanel implements QClient {
                 String old = renamingTarget;
                 if (old == null || old.isEmpty()) {
                     NotificationManager.pushCustom("No config to rename", HEADER_ICON);
+                    ChatUtils.sendMessage("Конфиг не найден для переименования!");
                 } else {
                     Popka.INSTANCE.configStorage.renameConfig(old, name);
                     NotificationManager.pushCustom("Config renamed: " + old + " -> " + name, HEADER_ICON);
+                    ChatUtils.sendMessage("Конфиг " + old + " переименован в " + name + "!");
                 }
             } else {
                 Popka.INSTANCE.configStorage.saveConfig(name);
                 NotificationManager.pushCustom("Config saved: " + name, HEADER_ICON);
+                ChatUtils.sendMessage("Конфиг " + name + " успешно сохранён!");
             }
         } catch (Exception e) {
             NotificationManager.pushCustom("Error: " + e.getMessage(), HEADER_ICON);
+            ChatUtils.sendMessage("Ошибка: " + e.getMessage() + "!");
         }
 
         cancelTextInput();
@@ -510,8 +527,10 @@ public class ClickGuiConfigPanel implements QClient {
         try {
             Popka.INSTANCE.configStorage.loadConfig(name);
             NotificationManager.pushCustom("Config loaded: " + name, HEADER_ICON);
+            ChatUtils.sendMessage("Конфиг " + name + " успешно загружен!");
         } catch (Exception e) {
             NotificationManager.pushCustom("Error loading: " + e.getMessage(), HEADER_ICON);
+            ChatUtils.sendMessage("Ошибка при загрузке конфига " + name + "!");
         }
     }
 
@@ -519,8 +538,10 @@ public class ClickGuiConfigPanel implements QClient {
         try {
             Popka.INSTANCE.configStorage.deleteConfig(name);
             NotificationManager.pushCustom("Config deleted: " + name, HEADER_ICON);
+            ChatUtils.sendMessage("Конфиг " + name + " удалён!");
         } catch (Exception e) {
             NotificationManager.pushCustom("Error deleting: " + e.getMessage(), HEADER_ICON);
+            ChatUtils.sendMessage("Ошибка при удалении конфига " + name + "!");
         }
         refreshConfigs();
     }
@@ -530,6 +551,7 @@ public class ClickGuiConfigPanel implements QClient {
             File configsDir = Popka.INSTANCE.configsDir;
             if (configsDir == null) {
                 NotificationManager.pushCustom("Configs dir not set", HEADER_ICON);
+                ChatUtils.sendMessage("Папка с конфигами не задана!");
                 return;
             }
             if (!configsDir.exists()) {
@@ -537,8 +559,10 @@ public class ClickGuiConfigPanel implements QClient {
             }
             new ProcessBuilder("explorer.exe", configsDir.getAbsolutePath()).start();
             NotificationManager.pushCustom("Configs folder opened", HEADER_ICON);
+            ChatUtils.sendMessage("Папка с конфигами открыта!");
         } catch (Exception e) {
             NotificationManager.pushCustom("Error opening folder", HEADER_ICON);
+            ChatUtils.sendMessage("Ошибка при открытии папки с конфигами!");
         }
     }
 

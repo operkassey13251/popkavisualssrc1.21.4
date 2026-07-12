@@ -30,7 +30,7 @@ public class ChatUtils {
                     ));
         }
 
-        text.append(Text.literal(" ⇨ ")
+        text.append(Text.literal(". ")
                 .setStyle(Style.EMPTY
                         .withBold(false)
                         .withColor(TextColor.fromRgb(new Color(200, 200, 200).getRGB()))
