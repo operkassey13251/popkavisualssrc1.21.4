@@ -42,11 +42,7 @@ public class HelperBinds extends InterfaceProcessing {
             return;
         }
 
-        if (ModuleClass.interfaceModule.style.is("Обычный")) {
-            DefaultStyle(eventRender, binds);
-        } else {
-            WaveStyle(eventRender, binds);
-        }
+        DefaultStyle(eventRender, binds);
 
         super.onRender(eventRender);
     }
@@ -98,52 +94,6 @@ public class HelperBinds extends InterfaceProcessing {
         }
 
         drawCompactBinds(eventRender.getContext(), binds, keyFont, x, y, height, itemSize, itemScale, fontGap, cellGap, sidePadding, 8.2f);
-
-        draggable.setWidth(animatedWidth);
-        draggable.setHeight(height);
-    }
-
-    private void WaveStyle(EventRender.Default eventRender, List<ServerHelper.HelperBind> binds) {
-        MatrixStack matrices = eventRender.getContext().getMatrices();
-        float x = draggable.getX();
-        float y = draggable.getY();
-
-        int time = (int) ((System.currentTimeMillis() % 2000) / 2000f * 360f);
-        int leftTop = ColorUtils.getThemeColor(time);
-        int leftBottom = ColorUtils.getThemeColor(time + 30);
-        int centerTop = ColorUtils.getThemeColor(time + 90);
-        int centerBottom = ColorUtils.getThemeColor(time + 120);
-        int rightTop = ColorUtils.getThemeColor(time + 180);
-        int rightBottom = ColorUtils.getThemeColor(time + 210);
-
-        Font keyFont = issue(14);
-        float height = 22.0f;
-        float itemSize = 11.0f;
-        float itemScale = 0.69f;
-        float fontGap = 3.5f;
-        float cellGap = 6.0f;
-        float sidePadding = 7.0f;
-        float width = getCompactWidth(binds, keyFont, itemSize, fontGap, cellGap, sidePadding, 72.0f);
-
-        widthAnimation.update(width);
-        float animatedWidth = widthAnimation.getValue();
-
-        if (binds.isEmpty()) {
-            RenderUtils.drawWaveHudHeader(matrices, x, y, animatedWidth, 15, 0,
-                    10, 10, leftTop, leftBottom, centerTop, centerBottom, rightTop, rightBottom);
-            String title = "helper";
-            float titleX = x + (animatedWidth - issue(15).getWidth(title)) / 2.0f;
-            issue(15).drawStringWithShadow(matrices, title, titleX, y + 5.0f, -1);
-            draggable.setWidth(animatedWidth);
-            draggable.setHeight(18.0f);
-            return;
-        }
-
-        RenderUtils.drawWaveHudPanel(matrices, x, y, animatedWidth, height, ColorUtils.rgba(25, 25, 25, 150),
-                3.5f, 0, 10, 10,
-                leftTop, leftBottom, centerTop, centerBottom, rightTop, rightBottom);
-
-        drawCompactBinds(eventRender.getContext(), binds, keyFont, x, y, height, itemSize, itemScale, fontGap, cellGap, sidePadding, 9.5f);
 
         draggable.setWidth(animatedWidth);
         draggable.setHeight(height);

@@ -4,6 +4,7 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.ChatScreen;
 import net.minecraft.util.math.MathHelper;
+import org.lwjgl.glfw.GLFW;
 import fun.popka.Popka;
 import fun.popka.api.events.EventLink;
 import fun.popka.api.events.Priority;
@@ -20,7 +21,6 @@ import fun.popka.visuals.modules.impl.render.base.InterfaceProcessing;
 import fun.popka.visuals.modules.impl.render.base.implement.*;
 import fun.popka.visuals.modules.settings.implement.BooleanSetting;
 import fun.popka.visuals.modules.settings.implement.ListSetting;
-import fun.popka.visuals.modules.settings.implement.ModeSetting;
 
 import java.util.LinkedHashMap;
 import java.util.Locale;
@@ -40,10 +40,8 @@ public class Interface extends Module {
     private final KeyBinds keyBinds;
     private final HelperBinds helperBinds;
     private final Potions potions;
-    private final KeyStrokes keyStrokes;
     private final Notifications notifications;
     private final TargetHud targetHud;
-    private final Session session;
     private final Information information;
     private final StaffList staffList;
     private boolean targetHudMenuOpen;
@@ -66,9 +64,9 @@ public class Interface extends Module {
     private final AnimationUtils waterMarkTpsBgAnimation = new AnimationUtils(1f, 15.0f, Easings.CUBIC_OUT);
     private final AnimationUtils waterMarkTpsCircleAnimation = new AnimationUtils(1f, 8.2f, Easings.BACK_OUT);
     private final AnimationUtils hudRectTypeSwitchAnimation = new AnimationUtils(1f, 7.0f, Easings.CUBIC_OUT);
+    private boolean arrayListScaleSliderActive = false;
+    private final AnimationUtils arrayListScaleSliderAnimation = new AnimationUtils(0f, 12.0f, Easings.CUBIC_OUT);
     private static final String HUD_HINT_TEXT = "ПКМ - по элементу для открытия настроек";
-
-    public ModeSetting style = new ModeSetting("Стиль", "Wave", "Wave", "Обычный");
 
     private final ListSetting hudModules = new ListSetting("Элементы",
             new BooleanSetting("Ватермарка", true),
@@ -79,21 +77,17 @@ public class Interface extends Module {
             new BooleanSetting("Таргет худ", true),
             new BooleanSetting("Уведомления", true),
             new BooleanSetting("Стафф", true),
-            new BooleanSetting("Сессия", true).visible(() -> style.is("Wave")),
-            new BooleanSetting("КейСтроки", true).visible(() -> style.is("Wave")),
             new BooleanSetting("Информация", true));
 
     public Interface() {
         super("Interface", "Интерфейс клиента", ModuleCategory.RENDER);
-        addSettings(hudModules, style);
+        addSettings(hudModules);
         this.waterMark = new WaterMark(Popka.draggable(this, "WaterMark", 10, 10));
         this.arrayListHud = new ArrayListHud(Popka.draggable(this, "ArrayList", 5, 24));
         this.keyBinds = new KeyBinds(Popka.draggable(this, "KeyBinds", 30, 30));
         this.helperBinds = new HelperBinds(Popka.draggable(this, "HelperBinds", 90, 30));
         this.potions = new Potions(Popka.draggable(this, "Potions", 30, 60));
         this.staffList = new StaffList(Popka.draggable(this, "StaffList", 60, 100));
-        this.session = new Session(Popka.draggable(this, "Session", 70, 30));
-        this.keyStrokes = new KeyStrokes(Popka.draggable(this, "KeyStrokes", 150, 120));
         this.information = new Information(Popka.draggable(this, "Information", 50, 100));
         this.notifications = new Notifications(Popka.draggable(this, "Notifications", 0, 0));
         this.targetHud = new TargetHud(Popka.draggable(this, "TargetHud", 30, 90));
@@ -144,10 +138,8 @@ public class Interface extends Module {
         if (isHudElementEnabled(keyBinds) && isHudElementHovered(keyBinds, mouseX, mouseY)) return keyBinds;
         if (isHudElementEnabled(helperBinds) && isHudElementHovered(helperBinds, mouseX, mouseY)) return helperBinds;
         if (isHudElementEnabled(potions) && isHudElementHovered(potions, mouseX, mouseY)) return potions;
-        if (isHudElementEnabled(keyStrokes) && isHudElementHovered(keyStrokes, mouseX, mouseY)) return keyStrokes;
         if (isHudElementEnabled(information) && isHudElementHovered(information, mouseX, mouseY)) return information;
         if (isHudElementEnabled(staffList) && isHudElementHovered(staffList, mouseX, mouseY)) return staffList;
-        if (isHudElementEnabled(session) && isHudElementHovered(session, mouseX, mouseY)) return session;
         if (isHudElementEnabled(notifications) && isHudElementHovered(notifications, mouseX, mouseY)) return notifications;
         return null;
     }
@@ -158,6 +150,7 @@ public class Interface extends Module {
     private float getMenuHeightForElement(InterfaceProcessing element) {
         if (element == targetHud) return 59.0f;
         if (element == waterMark) return 69.0f;
+        if (element == arrayListHud) return 51.0f;
         return 29.0f;
     }
 
@@ -180,6 +173,7 @@ public class Interface extends Module {
             if (targetHudMenuOpen && hudContextElement == hoveredElement) {
                 targetHudMenuOpen = false;
                 pendingHudContextElement = null;
+                arrayListScaleSliderActive = false;
             } else if (targetHudMenuOpen && hudContextElement != null && hudContextElement != hoveredElement) {
                 pendingHudContextElement = hoveredElement;
                 float menuWidth = getTargetHudMenuWidth();
@@ -220,14 +214,31 @@ public class Interface extends Module {
         float buttonH = 10.0f;
         float normalButtonX = buttonX;
         float unusualButtonX = buttonX + buttonW + buttonGap;
-        float rectButtonY = hudContextElement == targetHud ? targetHudMenuY + 46.0f : (hudContextElement == waterMark ? targetHudMenuY + 56.0f : targetHudMenuY + 14.0f);
+        float rectButtonY = hudContextElement == targetHud ? targetHudMenuY + 46.0f : (hudContextElement == waterMark ? targetHudMenuY + 56.0f : (hudContextElement == arrayListHud ? targetHudMenuY + 36.0f : targetHudMenuY + 14.0f));
         boolean menuHovered = HoveringUtils.isHovered(mouseX, mouseY, targetHudMenuX, targetHudMenuY, menuWidth, menuHeight);
         boolean rectNormalHovered = HoveringUtils.isHovered(mouseX, mouseY, normalButtonX, rectButtonY, buttonW, buttonH);
         boolean rectUnusualHovered = HoveringUtils.isHovered(mouseX, mouseY, unusualButtonX, rectButtonY, buttonW, buttonH);
         if (button == 0 && !menuHovered && hoveredElement == hudContextElement) {
             targetHudMenuOpen = false;
             pendingHudContextElement = null;
+            arrayListScaleSliderActive = false;
             return false;
+        }
+        if (button == 0 && hudContextElement == arrayListHud) {
+            float sliderTrackX = targetHudMenuX + 5.0f;
+            float sliderTrackY = targetHudMenuY + 14.0f;
+            float sliderTrackW = 90.0f;
+            if (HoveringUtils.isHovered(mouseX, mouseY, sliderTrackX, sliderTrackY, sliderTrackW, 8.0f)) {
+                float delta = 2.0f - 0.1f;
+                float clickedX = (float) mouseX - sliderTrackX;
+                float value01 = Math.max(0f, Math.min(1f, clickedX / sliderTrackW));
+                float newValue = 0.1f + delta * value01;
+                newValue = Math.round(newValue / 0.05f) * 0.05f;
+                newValue = Math.max(0.1f, Math.min(2.0f, newValue));
+                arrayListHud.setScale(newValue);
+                arrayListScaleSliderActive = true;
+                return true;
+            }
         }
         if (button == 0 && rectNormalHovered) {
             hudContextElement.setUnusualRectType(false);
@@ -292,6 +303,9 @@ public class Interface extends Module {
         return false;
     }
     public void renderHudContextMenu(DrawContext context, int mouseX, int mouseY) {
+        if (arrayListScaleSliderActive && hudContextElement != arrayListHud) {
+            arrayListScaleSliderActive = false;
+        }
         if (hudContextElement != null && !isHudElementEnabled(hudContextElement)) {
             targetHudMenuOpen = false;
             hudContextElement = null;
@@ -320,6 +334,7 @@ public class Interface extends Module {
         boolean targetContext = hudContextElement == targetHud;
         boolean waterMarkContext = hudContextElement == waterMark;
         boolean notificationsContext = hudContextElement == notifications;
+        boolean arrayListContext = hudContextElement == arrayListHud;
         float menuWidth = getTargetHudMenuWidth();
         float menuHeight = getTargetHudMenuHeight();
         clampTargetHudMenuToWindow(menuWidth, menuHeight);
@@ -393,10 +408,53 @@ public class Interface extends Module {
             float ntToggleX = x + menuWidth - 21.0f;
             float ntBaseY = y + 3.5f;
             float ntLabelX = x + 5;
+        } else if (arrayListContext) {
+            float sliderLabelY = y + 7.5f;
+            float sliderTrackX = x + 5.0f;
+            float sliderTrackY = y + 14.0f;
+            float sliderTrackW = 90.0f;
+            float sliderTrackH = 4.5f;
+
+            if (arrayListScaleSliderActive) {
+                boolean leftPressed = GLFW.glfwGetMouseButton(mc.getWindow().getHandle(), GLFW.GLFW_MOUSE_BUTTON_LEFT) == GLFW.GLFW_PRESS;
+                if (leftPressed) {
+                    float delta = 2.0f - 0.1f;
+                    float clickedX = mouseX - sliderTrackX;
+                    float value01 = Math.max(0f, Math.min(1f, clickedX / sliderTrackW));
+                    float newValue = 0.1f + delta * value01;
+                    newValue = Math.round(newValue / 0.05f) * 0.05f;
+                    newValue = Math.max(0.1f, Math.min(2.0f, newValue));
+                    arrayListHud.setScale(newValue);
+                } else {
+                    arrayListScaleSliderActive = false;
+                }
+            }
+
+            float sliderPos = (arrayListHud.getScale() - 0.1f) / (2.0f - 0.1f);
+            arrayListScaleSliderAnimation.update(sliderPos);
+            float animatedPos = arrayListScaleSliderAnimation.getValue();
+
+            issue(12).draw(matrices, "Размер", x + 4.7f, sliderLabelY,
+                    ColorUtils.rgba(255, 255, 255, fadeTextAlphaSafe(contentProgress, 225, 2)));
+
+            String valueStr = String.format(Locale.ROOT, "%.2f", arrayListHud.getScale());
+            float valueX = x + menuWidth - 5.0f - issue(12).getWidth(valueStr);
+            issue(12).drawString(matrices, valueStr, valueX, sliderLabelY,
+                    ColorUtils.setAlphaColor(themeColor, textAlpha));
+
+            int sliderTrackColor = fadeColorSafe(ColorUtils.rgba(70, 70, 70, 255), contentProgress, 2);
+            int sliderFillColor1 = fadeColorSafe(ColorUtils.darken(themeColor, 0.4f), contentProgress, 2);
+            int sliderFillColor2 = fadeColorSafe(themeColor, contentProgress, 2);
+            int sliderHandleColor = fadeColorSafe(-1, contentProgress, 2);
+
+            RenderUtils.drawRoundedRect(matrices, sliderTrackX, sliderTrackY, sliderTrackW, sliderTrackH, 1.25f, sliderTrackColor);
+            RenderUtils.drawGradientRect(matrices, sliderTrackX, sliderTrackY, animatedPos * sliderTrackW, sliderTrackH, 1.25f,
+                    sliderFillColor1, sliderFillColor2, true);
+            RenderUtils.drawRoundCircle(matrices, sliderTrackX + animatedPos * sliderTrackW, sliderTrackY + 2.25f, 6, sliderHandleColor);
         }
-        issue(12).draw(matrices, "Тип ректа", x + 4.7f, targetContext ? y + 39.5f : (waterMarkContext ? y + 49.5f : y + 7.5f),
+        issue(12).draw(matrices, "Тип ректа", x + 4.7f, targetContext ? y + 39.5f : (waterMarkContext ? y + 49.5f : (arrayListContext ? y + 29.5f : y + 7.5f)),
                 ColorUtils.rgba(255, 255, 255, fadeTextAlphaSafe(contentProgress, 225, 2)));
-        float rectButtonY = targetContext ? y + 46.0f : (waterMarkContext ? y + 56.0f : y + 14.0f);
+        float rectButtonY = targetContext ? y + 46.0f : (waterMarkContext ? y + 56.0f : (arrayListContext ? y + 36.0f : y + 14.0f));
         boolean unusualRect = hudContextElement.isUnusualRectType();
         hudRectTypeSwitchAnimation.update(unusualRect ? 1.0f : 0.0f);
         float rectSwitchProgress = MathHelper.clamp(hudRectTypeSwitchAnimation.getValue(), 0.0f, 1.0f);
@@ -477,10 +535,8 @@ public class Interface extends Module {
         elements.put("keyBinds", keyBinds);
         elements.put("helperBinds", helperBinds);
         elements.put("potions", potions);
-        elements.put("keyStrokes", keyStrokes);
         elements.put("notifications", notifications);
         elements.put("targetHud", targetHud);
-        elements.put("session", session);
         elements.put("information", information);
         elements.put("staffList", staffList);
         return elements;
@@ -488,16 +544,13 @@ public class Interface extends Module {
 
     @EventLink(priority = Priority.LOWEST)
     public void onEvent(final EventRender.Default event) {
-        boolean waveStyle = style.is("Wave");
         boolean showWaterMark = hudModules.is("Ватермарка");
         boolean showArrayList = hudModules.is("Аррай лист");
         boolean showKeyBinds = hudModules.is("Горячие клавиши");
         boolean showHelperBinds = hudModules.is("Серверные бинды");
         boolean showPotions = hudModules.is("Зелья");
-        boolean showKeyStrokes = hudModules.is("КейСтроки");
         boolean showInformation = hudModules.is("Информация");
         boolean showStaff = hudModules.is("Стафф");
-        boolean showSession = hudModules.is("Сессия");
         boolean showNotifications = hudModules.is("Уведомления");
         boolean showTargetHud = hudModules.is("Таргет худ");
 
@@ -510,14 +563,12 @@ public class Interface extends Module {
         RenderSystem.depthMask(false);
         try {
             if (showWaterMark) renderHudElement(this.waterMark, event);
-            if (showArrayList && waveStyle) renderHudElement(this.arrayListHud, event);
+            if (showArrayList) renderHudElement(this.arrayListHud, event);
             if (showKeyBinds) renderHudElement(this.keyBinds, event);
             if (showHelperBinds) renderHudElement(this.helperBinds, event);
             if (showPotions) renderHudElement(this.potions, event);
-            if (showKeyStrokes && waveStyle) renderHudElement(this.keyStrokes, event);
             if (showInformation) renderHudElement(this.information, event);
             if (showStaff) renderHudElement(this.staffList, event);
-            if (showSession && waveStyle) renderHudElement(this.session, event);
             if (showNotifications) renderHudElement(this.notifications, event);
             if (showTargetHud) renderHudElement(this.targetHud, event);
         } finally {

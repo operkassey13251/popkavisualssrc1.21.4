@@ -19,8 +19,7 @@ public class Information extends InterfaceProcessing {
 
     @Override
     public void onRender(EventRender.Default eventRender) {
-        if (!ModuleClass.interfaceModule.style.is("Wave")) DefaultStyle(eventRender);
-        else WaveStyle(eventRender);
+        DefaultStyle(eventRender);
         super.onRender(eventRender);
     }
 
@@ -82,86 +81,6 @@ public class Information extends InterfaceProcessing {
 
         draggable.setHeight(height);
         draggable.setWidth(totalWidth);
-    }
-
-    public void WaveStyle(EventRender.Default eventRender) {
-        float x = draggable.getX(), y = draggable.getY();
-
-        float time = (System.currentTimeMillis() % 2000) / 2000f * 360f;
-
-        int leftTop1 = ColorUtils.getThemeColor((int) time);
-        int leftBottom1 = ColorUtils.getThemeColor((int) (time + 30));
-        int centerTop1 = ColorUtils.getThemeColor((int) (time + 90));
-        int centerBottom1 = ColorUtils.getThemeColor((int) (time + 120));
-        int rightTop1 = ColorUtils.getThemeColor((int) (time + 180));
-        int rightBottom1 = ColorUtils.getThemeColor((int) (time + 210));
-
-        String title = "coords";
-        String xText = "x: " + (int) mc.player.getPos().getX();
-        String yText = "y: " + (int) mc.player.getPos().getY();
-        String zText = "z: " + (int) mc.player.getPos().getZ();
-
-        var font = Fonts.getFont("suisse", 15);
-
-        float xWidth = font.getWidth(xText);
-        float yWidth = font.getWidth(yText);
-        float zWidth = font.getWidth(zText);
-        float titleWidth = font.getWidth(title);
-
-        float maxCoordWidth = Math.max(xWidth, Math.max(yWidth, zWidth));
-
-        float padding = 9f;
-        float rectWidth = maxCoordWidth + padding;
-        float rectHeight = 40;
-
-        rectWidth = Math.max(rectWidth, 35);
-
-        float centerX = x + rectWidth / 2;
-
-        RenderUtils.drawWaveHudPanel(eventRender.getContext().getMatrices(), x, y, rectWidth, rectHeight, ColorUtils.rgba(25, 25, 25, 150),
-                3.5f, 0, 10, 10,
-                leftTop1, leftBottom1, centerTop1, centerBottom1, rightTop1, rightBottom1);
-
-        float barPadding = 5f;
-        RenderUtils.drawWaveHudHeader(eventRender.getContext().getMatrices(), x + barPadding, y + 12, rectWidth - barPadding * 2, 2.5f, 0,
-                10, 10, leftTop1, leftBottom1, centerTop1, centerBottom1, rightTop1, rightBottom1);
-
-        font.drawStringWithShadow(eventRender.getContext().getMatrices(), title, centerX - titleWidth / 2, y + 5, -1);
-        font.drawStringWithShadow(eventRender.getContext().getMatrices(), xText, x + 4.5f, y + 17f, -1);
-        font.drawStringWithShadow(eventRender.getContext().getMatrices(), yText, x + 4.5f, y + 24f, -1);
-        font.drawStringWithShadow(eventRender.getContext().getMatrices(), zText, x + 4.5f, y + 31f, -1);
-
-        float bpsX = x + rectWidth + 5;
-        float bpsY = y;
-
-        double bps = MathUtils.calculateBPS();
-
-        String bpsTitle = "bps";
-        String bpsText = String.valueOf((int) bps);
-
-        float bpsTitleWidth = font.getWidth(bpsTitle);
-        float bpsTextWidth = font.getWidth(bpsText);
-
-        float bpsRectWidth = Math.max(bpsTitleWidth, bpsTextWidth) + 10;
-        float bpsRectHeight = 25;
-
-        bpsRectWidth = Math.max(bpsRectWidth, 30);
-
-        float bpsCenterX = bpsX + bpsRectWidth / 2;
-
-        RenderUtils.drawWaveHudPanel(eventRender.getContext().getMatrices(), bpsX, bpsY, bpsRectWidth, bpsRectHeight, ColorUtils.rgba(25, 25, 25, 150),
-                3.5f, 0, 10, 10,
-                leftTop1, leftBottom1, centerTop1, centerBottom1, rightTop1, rightBottom1);
-
-        RenderUtils.drawWaveHudHeader(eventRender.getContext().getMatrices(), bpsX + barPadding, bpsY + 12, bpsRectWidth - barPadding * 2, 2.5f, 0,
-                10, 10, leftTop1, leftBottom1, centerTop1, centerBottom1, rightTop1, rightBottom1);
-
-        font.drawStringWithShadow(eventRender.getContext().getMatrices(), bpsTitle, bpsCenterX - bpsTitleWidth / 2, bpsY + 5, -1);
-        font.drawStringWithShadow(eventRender.getContext().getMatrices(), bpsText, bpsCenterX - bpsTextWidth / 2, bpsY + 17f, -1);
-
-        float totalWidth = rectWidth + 5 + bpsRectWidth;
-        draggable.setWidth(totalWidth);
-        draggable.setHeight(rectHeight);
     }
 
     private String formatTwoDecimals(double value) {

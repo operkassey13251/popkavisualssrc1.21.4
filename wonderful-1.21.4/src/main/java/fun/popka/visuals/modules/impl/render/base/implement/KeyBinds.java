@@ -17,9 +17,7 @@ import fun.popka.api.utils.scissor.ScissorUtils;
 import fun.popka.visuals.modules.Module;
 import fun.popka.visuals.modules.impl.render.base.InterfaceProcessing;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 public class KeyBinds extends InterfaceProcessing {
@@ -70,8 +68,7 @@ public class KeyBinds extends InterfaceProcessing {
 
     @Override
     public void onRender(EventRender.Default eventRender) {
-        if (ModuleClass.interfaceModule.style.is("Обычный")) DefaultStyle(eventRender);
-        else WaveStyle(eventRender);
+        DefaultStyle(eventRender);
         super.onRender(eventRender);
     }
 
@@ -171,95 +168,5 @@ public class KeyBinds extends InterfaceProcessing {
             return Popka.INSTANCE.themeStorage.getThemes().getTheme().color[0];
         }
         return ColorUtils.getThemeColor();
-    }
-
-    public void WaveStyle(EventRender.Default eventRender) {
-        final MatrixStack context = eventRender.getContext().getMatrices();
-        float x = draggable.getX(), y = draggable.getY();
-
-        int time = (int) ((System.currentTimeMillis() % 2000) / 2000f * 360f);
-
-        int leftTop = ColorUtils.getThemeColor(time);
-        int leftBottom = ColorUtils.getThemeColor(time + 30);
-        int centerTop = ColorUtils.getThemeColor(time + 90);
-        int centerBottom = ColorUtils.getThemeColor(time + 120);
-        int rightTop = ColorUtils.getThemeColor(time + 180);
-        int rightBottom = ColorUtils.getThemeColor(time + 210);
-
-        List<Module> activeModules = new ArrayList<>();
-        for (final Module module : ModuleClass.INSTANCE.getObject()) {
-            if (module.getKey() <= 0) {
-                module.getAnimka().update(0);
-                continue;
-            }
-            module.getAnimka().update(module.isEnable() ? 1 : 0);
-            if (module.getAnimka().getValue() > 0.01f) {
-                activeModules.add(module);
-            }
-        }
-
-        float targetWidth = 84f;
-        float height = 18f;
-        int visibleModules = 0;
-
-        for (final Module module : activeModules) {
-            float animValue = module.getAnimka().getValue();
-            if (animValue <= 0.01f) continue;
-            visibleModules++;
-
-            String line = module.getDisplayName().toLowerCase() + " >> toggle";
-            targetWidth = Math.max(targetWidth, issue(14).getWidth(line) + 7f);
-            height += 12f * animValue;
-        }
-
-        widthAnimation.update(targetWidth);
-        float animatedWidth = widthAnimation.getValue();
-
-        if (visibleModules == 0) {
-            float headerHeight = 18f;
-            RenderUtils.drawWaveHudHeader(context, x, y, animatedWidth, 15, 0,
-                    10, 10, leftTop, leftBottom, centerTop, centerBottom, rightTop, rightBottom);
-
-            String title = "keybinds";
-            float titleX = x + (animatedWidth - issue(15).getWidth(title)) / 2.0f;
-            issue(15).drawStringWithShadow(eventRender.getContext().getMatrices(), title, titleX, y + 5, -1);
-
-            draggable.setWidth(animatedWidth);
-            draggable.setHeight(headerHeight);
-            return;
-        }
-
-        RenderUtils.drawWaveHudPanel(context, x, y, animatedWidth, height, ColorUtils.rgba(25, 25, 25, 150),
-                15, 0, 10, 10,
-                leftTop, leftBottom, centerTop, centerBottom, rightTop, rightBottom);
-
-        String title = "keybinds";
-        float titleX = x + (animatedWidth - issue(15).getWidth(title)) / 2.0f;
-        issue(15).drawStringWithShadow(eventRender.getContext().getMatrices(), title, titleX, y + 5, -1);
-
-        float yOffset = 18f;
-        for (final Module module : activeModules) {
-            float animValue = module.getAnimka().getValue();
-            if (animValue <= 0.01f) continue;
-
-            ScissorUtils.push();
-            ScissorUtils.setFromComponentCoordinates(x, y, animatedWidth, height);
-
-            int alpha = (int) (255 * animValue);
-            int textColor = ColorUtils.rgba(255, 255, 255, alpha);
-
-            String text = module.getDisplayName().toLowerCase() + " >> toggle";
-            float textX = x + 5.5f;
-
-            issue(14).draw(context, text, textX, y + yOffset + 2, textColor);
-
-            yOffset += 12f * animValue;
-
-            ScissorUtils.unset();
-            ScissorUtils.pop();
-        }
-
-        draggable.setWidth(animatedWidth);
-        draggable.setHeight(height);
     }
 }

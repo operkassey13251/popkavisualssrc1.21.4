@@ -4,6 +4,8 @@ import net.minecraft.client.util.math.MatrixStack;
 import fun.popka.Popka;
 import fun.popka.api.events.implement.EventRender;
 import fun.popka.api.storages.implement.helpertstorages.enumvar.ModuleClass;
+import fun.popka.api.utils.animation.AnimationUtils;
+import fun.popka.api.utils.animation.Easings;
 import fun.popka.api.utils.color.ColorUtils;
 import fun.popka.api.utils.draggable.Draggable;
 import fun.popka.api.utils.render.RenderUtils;
@@ -18,95 +20,128 @@ import java.util.List;
 
 public class ArrayListHud extends InterfaceProcessing {
 
-    private static final float LINE_HEIGHT = 9.5f;
-    private static final float FLOW_SPEED = 1000f;
     private static final Comparator<ModuleEntry> MODULE_WIDTH_COMPARATOR = Comparator.comparingDouble((ModuleEntry entry) -> entry.width).reversed();
 
     private final List<ModuleEntry> visibleModules = new ArrayList<>();
+    private final AnimationUtils widthAnimation = new AnimationUtils(70, 10.5f, Easings.QUAD_OUT);
+
+    private float scale = 1.0f;
+
+    public float getScale() {
+        return scale;
+    }
+
+    public void setScale(float scale) {
+        this.scale = Math.max(0.1f, Math.min(2.0f, scale));
+    }
 
     public ArrayListHud(Draggable draggable) {
         super(draggable);
     }
 
-    private Font font() {
-        return Fonts.getFont("suisse", 14);
+    private Font issue(int size) {
+        return Fonts.getFont("suisse", size);
     }
 
-    private void drawFlowingText(MatrixStack matrices, Font font, String text, float x, float y, int color, float alphaMul) {
-        int textColor = ColorUtils.setAlphaColor(color, (int) (255 * alphaMul));
-        font.draw(matrices, text, x, y, textColor);
+    private int getThemeColor() {
+        if (!Popka.INSTANCE.themeStorage.getThemes().getTheme().getName().equals("Rainbow")) {
+            return Popka.INSTANCE.themeStorage.getThemes().getTheme().color[0];
+        }
+        return ColorUtils.getThemeColor();
     }
 
     @Override
     public void onRender(EventRender.Default eventRender) {
-        final MatrixStack matrices = eventRender.getContext().getMatrices();
-        final Font font = font();
+        MatrixStack matrices = eventRender.getContext().getMatrices();
+        float s = scale;
+        boolean scaled = Math.abs(s - 1.0f) > 0.001f;
+
+        if (scaled) {
+            float x = draggable.getX();
+            float y = draggable.getY();
+            matrices.push();
+            matrices.translate(x, y, 0);
+            matrices.scale(s, s, 1.0f);
+            matrices.translate(-x, -y, 0);
+        }
+
+        DefaultStyle(eventRender);
+
+        if (scaled) {
+            matrices.pop();
+            draggable.setWidth(draggable.getWidth() * s);
+            draggable.setHeight(draggable.getHeight() * s);
+        }
+
+        super.onRender(eventRender);
+    }
+
+    public void DefaultStyle(EventRender.Default eventRender) {
+        MatrixStack matrices = eventRender.getContext().getMatrices();
+        Font nameFont = issue(12);
+        int colorTheme = getThemeColor();
+
         final List<Module> modules = ModuleClass.INSTANCE.getObject();
         visibleModules.clear();
         for (Module module : modules) {
             module.getArrayAnimka().update(module.isEnable() ? 1.0f : 0.0f);
             float anim = module.getArrayAnimka().getValue();
-            if (anim <= 0.03f) continue;
+            if (anim <= 0.01f) continue;
 
             String displayName = module.getDisplayName();
-            visibleModules.add(new ModuleEntry(displayName.toLowerCase(), font.getWidth(displayName), anim));
+            visibleModules.add(new ModuleEntry(displayName.toLowerCase(), nameFont.getWidth(displayName), anim));
         }
         visibleModules.sort(MODULE_WIDTH_COMPARATOR);
-        final long now = System.currentTimeMillis();
+
+        float targetWidth = 0f;
+        float targetHeight = 0f;
+        for (ModuleEntry entry : visibleModules) {
+            float rowWidth = entry.width + 17f;
+            if (rowWidth > targetWidth) targetWidth = rowWidth;
+            targetHeight += 12f * entry.anim;
+        }
+
+        widthAnimation.update(targetWidth);
+        float width = widthAnimation.getValue();
+        float height = targetHeight;
 
         float x = draggable.getX();
         float y = draggable.getY();
-        float maxWidth = 0.0f;
-        boolean leftHalf = x <= mc.getWindow().getScaledWidth() * 0.5f;
 
+        float offsetY = 0f;
         for (ModuleEntry entry : visibleModules) {
-            maxWidth = Math.max(maxWidth, entry.width);
-        }
-
-        float yOffset = 0.0f;
-        for (int i = 0; i < visibleModules.size(); i++) {
-            ModuleEntry entry = visibleModules.get(i);
             float anim = entry.anim;
-            float lineStep = LINE_HEIGHT * anim;
+            if (anim <= 0.01f) continue;
 
-            int indexShift = (int) ((now * FLOW_SPEED) / 10.0f) + i * 42;
-            int rowColor = ColorUtils.getThemeColor(indexShift);
-            int rowColor2 = ColorUtils.getThemeColor(indexShift + 90);
-            int glowAlpha = (int) ((leftHalf ? 140 : 170) * anim);
-            int glow1 = ColorUtils.setAlphaColor(rowColor, glowAlpha);
-            int glow2 = ColorUtils.setAlphaColor(rowColor2, glowAlpha);
+            int alpha = (int) (255 * anim);
+            int textColor = ColorUtils.rgba(255, 255, 255, alpha);
+            int accentColor = ColorUtils.setAlphaColor(colorTheme, alpha);
+            int blurColor = ColorUtils.setAlphaColor(-1, alpha);
 
-            float textWidth = entry.width;
-            float drawX;
-            if (leftHalf) {
-                drawX = x - 3.0f;
+            float rowHeight = 12f * anim;
+            float rectX = x + 8f;
+            float rectY = y + offsetY;
+            float rectW = entry.width + 6f;
+            if (isUnusualRectType()) {
+                RenderUtils.drawBlur(matrices, rectX, rectY, rectW, rowHeight, 3.0f, 8.0f, blurColor);
             } else {
-                drawX = x + (maxWidth - textWidth) - 3.0f;
+                int bgColor = ColorUtils.rgba(20, 20, 20, (int) (170 * anim));
+                RenderUtils.drawRoundedRect(matrices, rectX, rectY, rectW, rowHeight, 3.0f, bgColor);
             }
-            float drawY = y + yOffset + (1.0f - anim) * 7.0f;
 
-            float shadowX = leftHalf ? drawX - 0.6f : drawX - 1.5f;
-            float shadowW = leftHalf ? textWidth - 4.0f : textWidth;
-            RenderUtils.drawShadow(matrices, shadowX, drawY, shadowW, 6.0f, 5, 11, glow2, glow2, glow1, glow1);
-            float textX = leftHalf ? drawX - 0.8f : drawX - 2.0f;
-            drawFlowingText(matrices, font, entry.lowerName, textX, drawY + 1.5f, rowColor, anim);
+            RenderUtils.drawRoundedRectOutline(matrices, rectX, rectY, rectW, rowHeight, 3.0f, 3.0f, 3.0f, 3.0f, 0.5f, accentColor);
 
-            yOffset += lineStep;
+            RenderUtils.drawRoundedRect(matrices, x + 5.2f, y + offsetY + (rowHeight - 5.7f) / 2f, 2.55f, 5.7f, 0.15f, accentColor);
+
+            float textHeight = nameFont.getFont().getBaselineHeight() * (nameFont.getSize() * 0.5f);
+            float textY = y + offsetY + (rowHeight - textHeight) / 2f + 1.5f;
+            nameFont.draw(matrices, entry.lowerName, x + 12f, textY, textColor);
+
+            offsetY += 12f * anim;
         }
 
-        if (yOffset > 0.5f) {
-            float lineX = leftHalf ? x - 6.5f : x + maxWidth - 7;
-            float lineWidth = 2.5f;
-            int topLineColor = ColorUtils.setAlphaColor(ColorUtils.getThemeColor(0), 220);
-            int bottomLineColor = ColorUtils.setAlphaColor(ColorUtils.getThemeColor(180), 220);
-
-            RenderUtils.drawGradientRect(matrices, lineX, y, lineWidth, yOffset - 2.0f, 0, topLineColor, bottomLineColor);
-        }
-
-        draggable.setWidth(maxWidth + 4.0f);
-        draggable.setHeight(yOffset);
-
-        super.onRender(eventRender);
+        draggable.setWidth(width);
+        draggable.setHeight(height);
     }
 
     private record ModuleEntry(String lowerName, float width, float anim) {

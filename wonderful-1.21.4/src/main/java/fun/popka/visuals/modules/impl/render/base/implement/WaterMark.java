@@ -67,8 +67,7 @@ public class WaterMark extends InterfaceProcessing {
 
     @Override
     public void onRender(EventRender.Default eventRender) {
-        if (ModuleClass.interfaceModule.style.is("Wave")) WaveStyle(eventRender);
-        else DefaultStyle(eventRender);
+        DefaultStyle(eventRender);
         super.onRender(eventRender);
     }
 
@@ -240,25 +239,6 @@ public class WaterMark extends InterfaceProcessing {
 
         draggable.setWidth(panelW);
         draggable.setHeight(panelH);
-    }
-
-    public void WaveStyle(EventRender.Default eventRender) {
-        float x = draggable.getX(), y = draggable.getY();
-        var matrices = eventRender.getContext().getMatrices();
-        var waveFont = Fonts.getFont("wave", 30);
-        String watermarkText = "popka";
-
-        int indexColor = ColorUtils.getThemeColor(90);
-        int indexColor2 = ColorUtils.getThemeColor(180);
-        int indexColor3 = ColorUtils.getThemeColor(270);
-        int indexColor4 = ColorUtils.getColor(360);
-        float glowWidth = 95.0f + waveFont.getStringWidth("ful");
-
-        RenderUtils.drawShadow(matrices, x, y, glowWidth, 12, 10, 15, indexColor4, indexColor2, indexColor, indexColor3);
-        waveFont.drawGradientStringHorizontal(matrices, watermarkText, x, y, indexColor, indexColor2);
-
-        draggable.setWidth(Math.max(glowWidth, waveFont.getStringWidth(watermarkText)));
-        draggable.setHeight(12);
     }
 
     private void drawServerNameWithThemeParts(MatrixStack matrices, String serverName, float x, float y, int themeColor, int whiteColor) {

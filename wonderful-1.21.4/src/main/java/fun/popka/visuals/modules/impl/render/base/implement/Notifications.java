@@ -46,13 +46,6 @@ public class Notifications extends InterfaceProcessing {
         return entry.moduleName + " " + state;
     }
 
-    private String getWaveBodyText(NotificationManager.Entry entry) {
-        if (entry.isCustom()) {
-            return entry.customText;
-        }
-        return "Module '" + entry.moduleName + "' is " + (entry.enabled ? "enabled." : "disabled.");
-    }
-
     private float getDefaultEntryWidth(NotificationManager.Entry entry, float padX) {
         String text = getEntryText(entry);
         String iconGlyph = entry.categoryIcon != null && !entry.categoryIcon.isEmpty() ? entry.categoryIcon : "?";
@@ -65,11 +58,7 @@ public class Notifications extends InterfaceProcessing {
 
     @Override
     public void onRender(EventRender.Default eventRender) {
-        if (!ModuleClass.interfaceModule.style.is("Wave")) {
-            DefaultStyle(eventRender);
-        } else {
-            WaveStyle(eventRender);
-        }
+        DefaultStyle(eventRender);
         super.onRender(eventRender);
     }
 
@@ -244,115 +233,5 @@ public class Notifications extends InterfaceProcessing {
 
         draggable.setWidth(maxWidth);
         draggable.setHeight(Math.max(1f, targetY - baseY));
-    }
-
-    private void WaveStyle(EventRender.Default eventRender) {
-        if (mc == null) return;
-
-        long currentTime = System.currentTimeMillis();
-        float deltaTime = (currentTime - lastRenderTime) / 1000f;
-        lastRenderTime = currentTime;
-
-        List<NotificationManager.Entry> entries = NotificationManager.getActive();
-        if (entries.isEmpty()) {
-            appearAnimations.clear();
-            currentYPositions.clear();
-            return;
-        }
-
-        int time = (int) ((System.currentTimeMillis() % 2000) / 2000f * 360f);
-
-        int leftTop = ColorUtils.getThemeColor(time);
-        int leftBottom = ColorUtils.getThemeColor(time + 30);
-        int centerTop = ColorUtils.getThemeColor(time + 90);
-        int centerBottom = ColorUtils.getThemeColor(time + 120);
-        int rightTop = ColorUtils.getThemeColor(time + 180);
-        int rightBottom = ColorUtils.getThemeColor(time + 210);
-
-        long now = System.currentTimeMillis();
-
-        float spacing = 4f;
-        float lerpSpeed = 14f;
-        float screenW = mc.getWindow().getScaledWidth();
-        float screenH = mc.getWindow().getScaledHeight();
-        float rightPadding = 5f;
-        float bottomPadding = 5f;
-
-        float stackOffset = 0f;
-        float maxWidth = 120f;
-
-        for (NotificationManager.Entry entry : entries) {
-            String title = "Notify";
-            String body = getWaveBodyText(entry);
-            float iconW = iconNew(14).getWidth("j");
-            float titleW = issue(15).getWidth(title);
-            float bodyW = issue(13).getWidth(body);
-            float width = Math.max(120f, Math.max(titleW + iconW + 18f, bodyW + 14f));
-            maxWidth = Math.max(maxWidth, width);
-        }
-
-        for (NotificationManager.Entry entry : entries) {
-            AnimationUtils anim = appearAnimations.computeIfAbsent(entry, e -> new AnimationUtils(0f, 12f, Easings.QUAD_OUT));
-            anim.update(1f);
-            float appear = anim.getValue();
-
-            long age = now - entry.startTime;
-            float alphaMul = appear;
-            if (age > NotificationManager.DURATION_MS - 200) {
-                alphaMul = (1f - (age - (NotificationManager.DURATION_MS - 200)) / 200f) * appear;
-            }
-            if (alphaMul <= 0.01f) continue;
-
-            String title = "Notify";
-            String body = getWaveBodyText(entry);
-            String warningGlyph = "j";
-
-            float iconW = iconNew(14).getWidth(warningGlyph);
-            float titleW = issue(15).getWidth(title);
-            float bodyW = issue(13).getWidth(body);
-            float width = Math.max(120f, Math.max(titleW + iconW + 18f, bodyW + 14f));
-            float height = 24f;
-
-            float x = screenW - width - rightPadding;
-            float targetY = screenH - bottomPadding - height - stackOffset;
-
-            Float currentY = currentYPositions.get(entry);
-            if (currentY == null) currentY = targetY;
-            currentY += (targetY - currentY) * Math.min(1f, lerpSpeed * deltaTime);
-            currentYPositions.put(entry, currentY);
-
-            float y = currentY;
-            float scale = 0.86f + 0.14f * alphaMul;
-
-            int bg = ColorUtils.rgba(25, 25, 25, (int) (150 * alphaMul));
-            int txt = ColorUtils.setAlphaColor(-1, (int) (255 * alphaMul));
-            int iconCol = ColorUtils.setAlphaColor(ColorUtils.rgba(235, 0, 0, 255), (int) (255 * alphaMul));
-
-            float cx = x + width * 0.5f;
-            float cy = y + height * 0.5f;
-            var ms = eventRender.getContext().getMatrices();
-            ms.push();
-            ms.translate(cx, cy, 0);
-            ms.scale(scale, scale, 1.0f);
-            ms.translate(-cx, -cy, 0);
-
-            RenderUtils.drawWaveHudPanel(ms, x, y, width, height - 1.5f, bg,
-                    3.5f, 0, 10, 10,
-                    leftTop, leftBottom, centerTop, centerBottom, rightTop, rightBottom);
-
-            iconNew(28).draw(ms, warningGlyph, x + 3f, y + 8, iconCol);
-            issue(15).draw(ms, title, x + 19, y + 6.5f, txt);
-            issue(13).draw(ms, body, x + 19, y + 15.0f, txt);
-
-            ms.pop();
-
-            stackOffset += (height + spacing) * appear;
-        }
-
-        appearAnimations.keySet().removeIf(entry -> !entries.contains(entry));
-        currentYPositions.keySet().removeIf(entry -> !entries.contains(entry));
-
-        draggable.setWidth(0);
-        draggable.setHeight(0);
     }
 }

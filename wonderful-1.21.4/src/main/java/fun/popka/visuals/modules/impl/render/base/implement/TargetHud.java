@@ -3,7 +3,6 @@ package fun.popka.visuals.modules.impl.render.base.implement;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import net.minecraft.client.gl.Framebuffer;
 import net.minecraft.client.gl.SimpleFramebuffer;
-import net.minecraft.client.gui.screen.ingame.InventoryScreen;
 import net.minecraft.client.render.*;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.LivingEntity;
@@ -159,14 +158,6 @@ public class TargetHud extends InterfaceProcessing {
         return true;
     }
 
-    private void applyHudTransform(MatrixStack matrices, float x, float y, float width, float height, float scaleX, float scaleY) {
-        float centerX = x + width * 0.5f;
-        float centerY = y + height * 0.5f;
-        matrices.translate(centerX, centerY, 0.0f);
-        matrices.scale(scaleX, scaleY, 1.0f);
-        matrices.translate(-centerX, -centerY, 0.0f);
-    }
-
     private static final class HeadParticle {
         float x;
         float y;
@@ -265,8 +256,7 @@ public class TargetHud extends InterfaceProcessing {
 
     @Override
     public void onRender(EventRender.Default eventRender) {
-        if (!ModuleClass.interfaceModule.style.is("Wave")) DefaultStyle(eventRender);
-        else WaveStyle(eventRender);
+        DefaultStyle(eventRender);
         super.onRender(eventRender);
     }
 
@@ -544,200 +534,6 @@ public class TargetHud extends InterfaceProcessing {
         int totalSlots = collectDisplayItems(target);
         float itemX = x + width - (totalSlots * itemSpacing) - 3f;
 
-        for (int itemIndex = 0; itemIndex < totalSlots; itemIndex++) {
-            ItemStack stack = displayItems[itemIndex];
-            if (!stack.isEmpty()) {
-                float slotX = itemX + itemIndex * itemSpacing;
-                drawTargetHudItem(eventRender, matrices, stack, slotX, itemY, itemScale);
-            }
-            displayItems[itemIndex] = ItemStack.EMPTY;
-        }
-
-        matrices.pop();
-
-        draggable.setWidth(width);
-        draggable.setHeight(height);
-    }
-
-    private final AnimationUtils scaleAnimation = new AnimationUtils(0.0f, 12.0f, Easings.BACK_OUT);
-    private final AnimationUtils hideScaleAnimation = new AnimationUtils(1.0f, 8.0f, Easings.BACK_IN);
-    private boolean wasVisible = false;
-
-    public void WaveStyle(EventRender.Default eventRender) {
-        if (mc.player == null) {
-            draggable.setWidth(0);
-            draggable.setHeight(0);
-            return;
-        }
-
-        Aura aura = ModuleClass.INSTANCE.aura;
-        boolean chatOpen = mc.currentScreen instanceof ChatScreen;
-        LivingEntity auraTarget = aura != null ? aura.getTarget() : null;
-        LivingEntity crosshairTarget = getCrosshairTargetEntity();
-        LivingEntity resolved = chatOpen ? mc.player : (auraTarget != null ? auraTarget : crosshairTarget);
-        boolean showTargetHud = chatOpen || auraTarget != null || crosshairTarget != null;
-        alphaAnimation.update(showTargetHud ? 1.0f : 0.0f);
-
-        if (showTargetHud && !wasVisible) {
-            scaleAnimation.setValue(0.0f);
-            hideScaleAnimation.setValue(1.0f);
-            wasVisible = true;
-        } else if (!showTargetHud && wasVisible) {
-            hideScaleAnimation.setValue(1.0f);
-            wasVisible = false;
-        }
-
-        if (showTargetHud) {
-            scaleAnimation.update(1.0f);
-            lastTarget = resolved;
-        } else {
-            hideScaleAnimation.update(0.0f);
-        }
-
-        float scale;
-        if (showTargetHud) {
-            scale = MathHelper.clamp(scaleAnimation.getValue(), 0.0f, 1.0f);
-        } else {
-            scale = MathHelper.clamp(hideScaleAnimation.getValue(), 0.0f, 1.0f);
-        }
-        float progress = scale;
-
-        LivingEntity target = showTargetHud ? resolved : lastTarget;
-        if (target == null || progress <= 0.01f) {
-            draggable.setWidth(0);
-            draggable.setHeight(0);
-            return;
-        }
-
-        float x = draggable.getX(), y = draggable.getY();
-        float padding = 3f;
-        float width = 110;
-        float height = 46;
-
-        float health = target.getHealth();
-        float maxHealth = Math.max(1.0f, target.getMaxHealth());
-        hpValueAnimation.update(health);
-        float animatedHealthValue = MathHelper.clamp(hpValueAnimation.getValue(), 0.0f, maxHealth);
-        float healthProgress = MathHelper.clamp(health / maxHealth, 0.0f, 1.0f);
-        hpAnimation.update(healthProgress);
-        float hpProgressAnimated = MathHelper.clamp(hpAnimation.getValue(), 0.0f, 1.0f);
-
-        if (hpProgressAnimated > hpTrailAnimation.getValue()) {
-            hpTrailAnimation.setValue(hpProgressAnimated);
-        } else {
-            hpTrailAnimation.update(hpProgressAnimated);
-        }
-
-        MatrixStack matrices = eventRender.getContext().getMatrices();
-        matrices.push();
-        applyHudTransform(matrices, x, y, width, height, scale, scale);
-        float visualAlpha = progress;
-        int alphaInt = (int)(255 * visualAlpha);
-
-        float entityBoxSize = height - padding * 2 - 4;
-
-        RenderUtils.drawTargetHudWaveFrame(matrices, x, y, width, height, padding, entityBoxSize, visualAlpha);
-
-        matrices.pop();
-
-        int entityX = (int)(x + padding + 3f);
-        int entityY = (int)(y + padding + 3f);
-        int entityX2 = (int)(x + padding + 3f + entityBoxSize - 2);
-        int entityY2 = (int)(y + padding + 3f + entityBoxSize - 2);
-        int entitySize = (int)(15 * progress);
-
-        float entityCenterX = x + padding + 3f + (entityBoxSize - 2) / 2;
-        float entityCenterY = y + padding + 3f + (entityBoxSize - 2) / 3;
-
-        float yaw = target.bodyYaw;
-        float pitch = target.getPitch();
-
-        double yawRadians = Math.toRadians(yaw + 180);
-        float lookX = entityCenterX + (float)(Math.sin(yawRadians) * 50);
-        float lookY = entityCenterY - pitch;
-
-        if (progress > 0.5f) {
-            InventoryScreen.drawEntity(
-                    eventRender.getContext(),
-                    entityX,
-                    entityY,
-                    entityX2,
-                    entityY2,
-                    entitySize,
-                    0.0f,
-                    lookX,
-                    lookY,
-                    target
-            );
-        }
-
-        matrices.push();
-        applyHudTransform(matrices, x, y, width, height, scale, scale);
-
-        String name = target.getName().getString();
-        float textX = x + padding + entityBoxSize + 6;
-        float waveNameFadeMaxWidth = Math.max(8.0f, (x + width - padding - 4.0f) - textX);
-
-        issue(14).drawStringWithFade(matrices, name, textX, y + padding + 5, waveNameFadeMaxWidth, ColorUtils.rgba(255, 255, 255, alphaInt));
-        issue(14).draw(matrices, "HP: " + String.format("%.1f", animatedHealthValue) + " | Dist: " + (int) target.distanceTo(mc.player), textX, y + padding + 20, ColorUtils.rgba(255, 255, 255, alphaInt));
-
-        float heartsX = textX;
-        float heartsY = y + padding + 15;
-        float heartSize = 5f;
-        float heartSpacing = 0.5f;
-        int totalHearts = 10;
-        float healthPerHeart = maxHealth / totalHearts;
-        float currentHealth = health;
-
-        int heartColor;
-        if (health <= maxHealth * 0.25f) {
-            heartColor = ColorUtils.rgba(255, 50, 50, alphaInt);
-        } else if (health <= maxHealth * 0.5f) {
-            heartColor = ColorUtils.rgba(255, 220, 0, alphaInt);
-        } else {
-            heartColor = ColorUtils.rgba(0, 255, 0, alphaInt);
-        }
-
-        int shadowColor = ColorUtils.applyAlpha(heartColor, visualAlpha * 0.5f);
-
-        for (int i = 0; i < totalHearts; i++) {
-            float hx = heartsX + i * (heartSize + heartSpacing);
-            float hy = heartsY;
-
-            RenderUtils.drawTargetHudHeartBase(matrices, hx, hy - 3, visualAlpha);
-
-            if (currentHealth > 0) {
-                float fillAmount = MathHelper.clamp(currentHealth / healthPerHeart, 0.0f, 1.0f);
-                float filledWidth = heartSize * fillAmount;
-
-                if (filledWidth > 0) {
-                    RenderUtils.drawTargetHudHeartFill(matrices, hx, hy - 3, filledWidth, heartColor, shadowColor);
-                }
-
-                currentHealth -= healthPerHeart;
-            }
-        }
-
-        float itemX = textX - 1;
-        float itemY = y + padding + 28;
-        float itemSpacing = 10;
-        int waveThemeColor = !Popka.INSTANCE.themeStorage.getThemes().getTheme().getName().equals("Rainbow")
-                ? Popka.INSTANCE.themeStorage.getThemes().getTheme().color[0]
-                : ColorUtils.getThemeColor();
-        int waveSlotBorderColor = ColorUtils.applyAlpha(ColorUtils.rgba(50, 50, 50, 255), visualAlpha);
-        int waveSlotTopColor = ColorUtils.applyAlpha(ColorUtils.darken(waveThemeColor, 0.15f), visualAlpha);
-        int waveSlotBottomColor = ColorUtils.applyAlpha(ColorUtils.darken(waveThemeColor, 0.05f), visualAlpha);
-
-        int totalSlots = collectDisplayItems(target);
-
-        if (totalSlots > 0) {
-            float containerX = itemX - 0.85f;
-            float containerY = itemY - 0.85f;
-            float containerW = (totalSlots - 1) * itemSpacing + 9.8f;
-            float containerH = 9.8f;
-        }
-
-        float itemScale = 0.5f;
         for (int itemIndex = 0; itemIndex < totalSlots; itemIndex++) {
             ItemStack stack = displayItems[itemIndex];
             if (!stack.isEmpty()) {

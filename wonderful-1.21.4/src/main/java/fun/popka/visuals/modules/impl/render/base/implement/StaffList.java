@@ -113,11 +113,7 @@ public class StaffList extends InterfaceProcessing {
 
         updateAnimations();
 
-        if (ModuleClass.interfaceModule.style.is("Обычный")) {
-            renderDefaultStyle(eventRender);
-        } else {
-            renderWaveStyle(eventRender);
-        }
+        renderDefaultStyle(eventRender);
 
         super.onRender(eventRender);
     }
@@ -432,98 +428,6 @@ public class StaffList extends InterfaceProcessing {
             RenderUtils.drawRoundedRect(matrices, statusBoxX + 4, statusBoxY + 1.5f, statusBoxWidth - 4.5f, 3.45f, 0.55f, statusRectColor);
 
             offsetY += itemHeight * anim;
-        }
-        ScissorUtils.pop();
-        ScissorUtils.unset();
-
-        draggable.setWidth(width);
-        draggable.setHeight(height);
-    }
-
-    private void renderWaveStyle(EventRender.Default eventRender) {
-        float x = draggable.getX();
-        float y = draggable.getY();
-        MatrixStack matrices = eventRender.getContext().getMatrices();
-
-        int time = (int) ((System.currentTimeMillis() % 2000) / 2000f * 360f);
-
-        int leftTop = ColorUtils.getThemeColor(time);
-        int leftBottom = ColorUtils.getThemeColor(time + 30);
-        int centerTop = ColorUtils.getThemeColor(time + 90);
-        int centerBottom = ColorUtils.getThemeColor(time + 120);
-        int rightTop = ColorUtils.getThemeColor(time + 180);
-        int rightBottom = ColorUtils.getThemeColor(time + 210);
-
-        List<String> visiblePlayers = getVisiblePlayers();
-
-        float maxWidth = 80f;
-        float headerHeight = 18f;
-        float itemHeight = 10f;
-        float padding = 5f;
-
-        for (String playerName : visiblePlayers) {
-            StaffData data = staffDataCache.get(playerName);
-            if (data != null) {
-                float statusW = font12.getWidth(data.status);
-                float totalW = padding + data.prefixWidth14 + data.nameWidth14 + statusW + padding;
-                if (totalW > maxWidth) {
-                    maxWidth = totalW;
-                }
-            }
-        }
-
-        float width = maxWidth;
-
-        float contentHeight = 0f;
-        for (String playerName : visiblePlayers) {
-            contentHeight += itemHeight * staffAnimations.getOrDefault(playerName, 0f);
-        }
-
-        float height = visiblePlayers.isEmpty() ? headerHeight : headerHeight + contentHeight + 4;
-
-        if (visiblePlayers.isEmpty()) {
-            RenderUtils.drawWaveHudHeader(matrices, x, y, width, 15, 0, 10, 10,
-                    leftTop, leftBottom, centerTop, centerBottom, rightTop, rightBottom);
-            float titleX = x + (width - font16.getWidth("stafflist")) / 2.0f;
-            font16.drawStringWithShadow(matrices, "stafflist", titleX, y + 5, -1);
-            draggable.setWidth(width);
-            draggable.setHeight(headerHeight);
-            return;
-        }
-
-        RenderUtils.drawWaveHudPanel(matrices, x, y, width, height, ColorUtils.rgba(25, 25, 25, 150),
-                15, 0, 10, 10,
-                leftTop, leftBottom, centerTop, centerBottom, rightTop, rightBottom);
-
-        float titleX = x + (width - font16.getWidth("stafflist")) / 1.9f;
-        font16.drawStringWithShadow(matrices, "stafflist", titleX, y + 5, -1);
-
-        float yOffsetPos = 20f;
-        ScissorUtils.push();
-        ScissorUtils.setFromComponentCoordinates(x, y, width, height);
-        for (String playerName : visiblePlayers) {
-            float anim = staffAnimations.getOrDefault(playerName, 0f);
-            if (anim <= 0.01f) continue;
-
-            StaffData data = staffDataCache.get(playerName);
-            if (data == null) continue;
-
-            int alpha = (int) (255 * anim);
-            float yOffset = -5 * (1 - anim);
-
-            float textX = x + padding;
-            for (int i = 0; i < data.segments.size(); i++) {
-                PrefixSegment seg = data.segments.get(i);
-                int color = ColorUtils.setAlphaColor(seg.color, alpha);
-                font14.draw(matrices, seg.text, textX, y + yOffsetPos + 1.5f + yOffset, color);
-                textX += seg.width14;
-            }
-
-            font14.draw(matrices, playerName + " >> ", textX, y + yOffsetPos + 1.5f + yOffset, ColorUtils.rgba(255, 255, 255, alpha));
-            float nameArrowWidth = font14.getWidth(playerName + " >> ");
-            font12.draw(matrices, data.status, textX + nameArrowWidth, y + yOffsetPos + 2.5f + yOffset, ColorUtils.setAlphaColor(getStatusColor(data.status), alpha));
-
-            yOffsetPos += itemHeight * anim;
         }
         ScissorUtils.pop();
         ScissorUtils.unset();

@@ -113,11 +113,7 @@ public class Potions extends InterfaceProcessing {
 
     @Override
     public void onRender(EventRender.Default eventRender) {
-        if (ModuleClass.interfaceModule.style.is("Обычный")) {
-            DefaultStyle(eventRender);
-        } else {
-            WaveStyle(eventRender);
-        }
+        DefaultStyle(eventRender);
         super.onRender(eventRender);
     }
 
@@ -190,7 +186,13 @@ public class Potions extends InterfaceProcessing {
         float width = widthAnimation.getValue();
         float height = targetHeight;
 
-        RenderUtils.drawDefaultHudElementRects(eventRender.getContext().getMatrices(), x, y, width, height, colorTheme, isUnusualRectType());
+        if (isUnusualRectType()) {
+            RenderUtils.drawLiquidGlassPanel(eventRender.getContext().getMatrices(), x, y, width, height, 3.0f, 3.5f, colorTheme);
+            RenderUtils.drawHudSquarePattern(eventRender.getContext().getMatrices(), x, y, width, height, colorTheme);
+            RenderUtils.drawRoundedRect(eventRender.getContext().getMatrices(), x + width - 14.5f, y + 3.0f, 10.0f, 10.0f, 2.0f, ColorUtils.darken(colorTheme, 0.4f));
+        } else {
+            RenderUtils.drawDefaultHudElementRects(eventRender.getContext().getMatrices(), x, y, width, height, colorTheme, false);
+        }
         issue(14).draw(eventRender.getContext().getMatrices(), "Effects", x + 5, y + 6f, -1);
         icon(13).draw(eventRender.getContext().getMatrices(), "d", x + width - 12.5f, y + 7.5f, colorTheme);
 
@@ -271,111 +273,6 @@ public class Potions extends InterfaceProcessing {
         animations.entrySet().removeIf(entry -> !active.contains(entry.getKey()) && entry.getValue().getValue() <= 0.01f);
         snapshots.keySet().removeIf(type -> !animations.containsKey(type));
         maxDurations.keySet().removeIf(type -> !animations.containsKey(type));
-
-        draggable.setWidth(width);
-        draggable.setHeight(height);
-    }
-
-    public void WaveStyle(EventRender.Default eventRender) {
-        float x = draggable.getX();
-        float y = draggable.getY();
-
-        int time = (int) ((System.currentTimeMillis() % 2000) / 2000f * 360f);
-
-        int leftTop = ColorUtils.getThemeColor(time);
-        int leftBottom = ColorUtils.getThemeColor(time + 30);
-        int centerTop = ColorUtils.getThemeColor(time + 90);
-        int centerBottom = ColorUtils.getThemeColor(time + 120);
-        int rightTop = ColorUtils.getThemeColor(time + 180);
-        int rightBottom = ColorUtils.getThemeColor(time + 210);
-
-        Collection<StatusEffectInstance> effects = mc != null && mc.player != null
-                ? mc.player.getStatusEffects()
-                : java.util.List.of();
-
-        Set<StatusEffect> active = new HashSet<>();
-        for (StatusEffectInstance effect : effects) {
-            StatusEffect type = effect.getEffectType().value();
-            active.add(type);
-            getAnimation(type).update(1);
-        }
-        for (Map.Entry<StatusEffect, AnimationUtils> entry : animations.entrySet()) {
-            if (!active.contains(entry.getKey())) {
-                entry.getValue().update(0);
-            }
-        }
-
-        float width = 84f;
-        float height = 18;
-        int visibleEffects = 0;
-
-        for (StatusEffectInstance effect : effects) {
-            AnimationUtils anim = getAnimation(effect.getEffectType().value());
-            float animValue = anim.getValue();
-            if (animValue <= 0.01f) continue;
-            visibleEffects++;
-
-            String baseName = I18n.translate(effect.getTranslationKey());
-            String levelSuffix = getLevelSuffix(effect.getAmplifier() + 1);
-            String line = baseName + (levelSuffix.isEmpty() ? "" : " > " + levelSuffix);
-            width = Math.max(width, issue(16).getWidth(line) + 38f);
-            width = Math.max(width, issue(15).getWidth(formatDuration(effect)) + 38f);
-            height += 18f * animValue;
-        }
-
-        if (visibleEffects == 0) {
-            float headerHeight = 18f;
-            RenderUtils.drawWaveHudHeader(eventRender.getContext().getMatrices(), x, y, width, 15, 0,
-                    10, 10, leftTop, leftBottom, centerTop, centerBottom, rightTop, rightBottom);
-            String title = "potions";
-            float titleX = x + (width - issue(16).getWidth(title)) / 2.0f;
-            drawTextWithShadow(eventRender, issue(16), title, titleX, y + 5, -1);
-            draggable.setWidth(width);
-            draggable.setHeight(headerHeight);
-            return;
-        }
-
-        RenderUtils.drawWaveHudPanel(eventRender.getContext().getMatrices(), x, y, width, height, ColorUtils.rgba(25, 25, 25, 150),
-                15, 0, 10, 10,
-                leftTop, leftBottom, centerTop, centerBottom, rightTop, rightBottom);
-
-        String title = "potions";
-        float titleX = x + (width - issue(16).getWidth(title)) / 1.9f;
-        drawTextWithShadow(eventRender, issue(16), title, titleX, y + 5, -1);
-
-        float yOffset = 20f;
-        for (StatusEffectInstance effect : effects) {
-            AnimationUtils anim = getAnimation(effect.getEffectType().value());
-            float animValue = anim.getValue();
-            if (animValue <= 0.01f) continue;
-
-            ScissorUtils.push();
-            ScissorUtils.setFromComponentCoordinates(x, y, width, height);
-
-            int alpha = (int) (255 * animValue);
-            int textColor = ColorUtils.rgba(255, 255, 255, alpha);
-            int levelColor = ColorUtils.rgba(20, 185, 45, alpha);
-
-            float iconX = x + 5f;
-            float iconY = y + yOffset;
-            drawEffectIcon(eventRender, effect.getEffectType(), iconX, iconY, 11, alpha);
-
-            String baseName = I18n.translate(effect.getTranslationKey()).toLowerCase();
-            String levelSuffix = getLevelSuffix(effect.getAmplifier() + 1);
-            float textX = iconX + 14f;
-
-            issue(15).draw(eventRender.getContext().getMatrices(), baseName + " >", textX, y + yOffset - 1, textColor);
-            if (!levelSuffix.isEmpty()) {
-                float nameW = issue(14).getWidth(baseName + " >");
-                issue(14).draw(eventRender.getContext().getMatrices(), " " + levelSuffix, textX + nameW + 2, y + yOffset - 0.5, levelColor);
-            }
-
-            issue(14).draw(eventRender.getContext().getMatrices(), formatDuration(effect), textX, y + yOffset + 7.5, textColor);
-
-            yOffset += 18f * animValue;
-            ScissorUtils.pop();
-            ScissorUtils.unset();
-        }
 
         draggable.setWidth(width);
         draggable.setHeight(height);

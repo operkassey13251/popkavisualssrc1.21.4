@@ -14,7 +14,6 @@ public class Fonts {
         initialized = true;
 
         loadFont("sf_regular");
-        loadFont("wave");
         loadFont("icon");
         loadFont("icon1");
         loadFont("iconnew");
