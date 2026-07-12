@@ -20,12 +20,10 @@ import java.util.List;
 public class ClickGuiRenderer {
     private final ClickGuiState state;
     private final ClickGuiSettingRenderer settingRenderer;
-    private final ClickGuiThemeSelector themeSelector;
 
-    public ClickGuiRenderer(ClickGuiState state, ClickGuiSettingRenderer settingRenderer, ClickGuiThemeSelector themeSelector) {
+    public ClickGuiRenderer(ClickGuiState state, ClickGuiSettingRenderer settingRenderer) {
         this.state = state;
         this.settingRenderer = settingRenderer;
-        this.themeSelector = themeSelector;
     }
 
     public void render(DrawContext context, int mouseX, int mouseY, Window window, float animationProgress) {
@@ -49,7 +47,6 @@ public class ClickGuiRenderer {
         }
 
         renderSearch(context, categories.length, colorTheme, alphaMul, getFadeShadeColor(alphaMul, 95));
-        themeSelector.render(context, window, state.getRenderOffsetY(), alphaMul, colorTheme, getFadeShadeColor(alphaMul, 95));
         renderDescription(context, window, hoveredModule, colorTheme, animationProgress);
     }
 

@@ -20,11 +20,9 @@ import java.util.List;
 
 public class ClickGuiInputHandler implements QClient {
     private final ClickGuiState state;
-    private final ClickGuiThemeSelector themeSelector;
 
-    public ClickGuiInputHandler(ClickGuiState state, ClickGuiThemeSelector themeSelector) {
+    public ClickGuiInputHandler(ClickGuiState state) {
         this.state = state;
-        this.themeSelector = themeSelector;
     }
 
     public boolean mouseClicked(double mouseX, double mouseY, int button, Window window) {
@@ -55,10 +53,6 @@ public class ClickGuiInputHandler implements QClient {
         }
 
         state.setEditingTextSetting(null);
-
-        if (themeSelector.handleClick(window, mouseX, mouseY, button, state.getRenderOffsetY())) {
-            return true;
-        }
 
         Module.ModuleCategory[] categories = Module.ModuleCategory.values();
         for (int i = 0; i < categories.length; i++) {

@@ -1215,7 +1215,10 @@ public class TargetESP extends Module {
     }
 
     private int getLightningColor(float hurtPC) {
-        int r1 = 80, g1 = 170, b1 = 255;
+        int theme = getESPColor();
+        int r1 = (theme >> 16) & 0xFF;
+        int g1 = (theme >> 8) & 0xFF;
+        int b1 = theme & 0xFF;
         int r2 = 255, g2 = 60, b2 = 60;
         int rr = (int) (r1 + (r2 - r1) * hurtPC);
         int gg = (int) (g1 + (g2 - g1) * hurtPC);
