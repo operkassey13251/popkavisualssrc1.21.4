@@ -625,6 +625,30 @@ public class RenderUtils implements QClient {
         );
     }
 
+    public void drawShimmeringOutline(MatrixStack matrices, float x, float y, float width, float height,
+                                      float borderRadius, int themeColor, float alpha) {
+        if (alpha <= 0.01f) return;
+
+        float phase = (System.currentTimeMillis() % 6000L) / 6000.0f;
+        int bright = themeColor;
+        int dark = ColorUtils.darken(themeColor, 0.45f);
+
+        float offset = 0.25f;
+        float twoPi = (float) (Math.PI * 2.0);
+        float tlT = (float) Math.sin(phase * twoPi) * 0.5f + 0.5f;
+        float trT = (float) Math.sin((phase + offset) * twoPi) * 0.5f + 0.5f;
+        float brT = (float) Math.sin((phase + offset * 2.0f) * twoPi) * 0.5f + 0.5f;
+        float blT = (float) Math.sin((phase + offset * 3.0f) * twoPi) * 0.5f + 0.5f;
+
+        int tlColor = ColorUtils.applyAlpha(ColorUtils.interpolateColor(bright, dark, tlT), alpha);
+        int trColor = ColorUtils.applyAlpha(ColorUtils.interpolateColor(bright, dark, trT), alpha);
+        int blColor = ColorUtils.applyAlpha(ColorUtils.interpolateColor(bright, dark, blT), alpha);
+        int brColor = ColorUtils.applyAlpha(ColorUtils.interpolateColor(bright, dark, brT), alpha);
+
+        drawRoundedRectOutline(matrices, x - 0.5f, y - 0.5f, width + 1.0f, height + 1.0f,
+                borderRadius, 1.0f, tlColor, trColor, blColor, brColor);
+    }
+
     public void drawLiquidGlassPanel(MatrixStack matrices, float x, float y, float width, float height,
                                      float gradientRadius, float borderRadius, int themeColor) {
         drawBlur(matrices, x, y, width, height, borderRadius, 8.0f, -1);

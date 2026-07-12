@@ -133,7 +133,7 @@ public class ArrayListHud extends InterfaceProcessing {
 
             RenderUtils.drawRoundedRect(matrices, x + 5.2f, y + offsetY + (rowHeight - 5.7f) / 2f, 2.55f, 5.7f, 0.15f, accentColor);
 
-            float textHeight = nameFont.getFont().getBaselineHeight() * (nameFont.getSize() * 0.5f);
+            float textHeight = nameFont.getBaselineHeight() * (nameFont.getSize() * 0.5f);
             float textY = y + offsetY + (rowHeight - textHeight) / 2f + 1.5f;
             nameFont.draw(matrices, entry.lowerName, x + 12f, textY, textColor);
 

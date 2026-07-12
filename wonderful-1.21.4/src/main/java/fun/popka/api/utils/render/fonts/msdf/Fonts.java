@@ -2,11 +2,14 @@ package fun.popka.api.utils.render.fonts.msdf;
 
 import net.minecraft.client.util.math.MatrixStack;
 import java.util.HashMap;
+import java.util.function.BooleanSupplier;
 
 public class Fonts {
 
     private static final HashMap<String, MsdfFont> loadedFonts = new HashMap<>();
     private static final HashMap<String, Font[]> fontCache = new HashMap<>();
+    private static final HashMap<Integer, VanillaFont> vanillaFontCache = new HashMap<>();
+    private static BooleanSupplier vanillaFontSupplier = () -> false;
     private static boolean initialized = false;
 
     public static void init() {
@@ -43,6 +46,10 @@ public class Fonts {
         if (size < 8) size = 8;
         if (size >= 100) size = 99;
 
+        if (cleanName.equals("suisse") && vanillaFontSupplier.getAsBoolean()) {
+            return getVanillaFont(size);
+        }
+
         Font[] fonts = fontCache.get(cleanName);
         if (fonts != null && fonts[size] != null) {
             return fonts[size];
@@ -58,6 +65,18 @@ public class Fonts {
         }
 
         return null;
+    }
+
+    private static Font getVanillaFont(int size) {
+        VanillaFont cached = vanillaFontCache.get(size);
+        if (cached != null) return cached;
+        VanillaFont font = new VanillaFont(size);
+        vanillaFontCache.put(size, font);
+        return font;
+    }
+
+    public static void setVanillaFontSupplier(BooleanSupplier supplier) {
+        vanillaFontSupplier = supplier;
     }
 
     public static void drawStringWithFade(Font font, String text, float x, float y, float maxWidth, int color) {

@@ -423,6 +423,7 @@ public class TargetHud extends InterfaceProcessing {
                     ColorUtils.applyAlpha(ColorUtils.rgba(50, 50, 50, 255), drawAlpha),
                     ColorUtils.applyAlpha(ColorUtils.darken(colorTheme, 0.15f), drawAlpha),
                     ColorUtils.applyAlpha(ColorUtils.darken(colorTheme, 0.05f), drawAlpha));
+            RenderUtils.drawShimmeringOutline(matrices, x, y, width, height, 4.5f, colorTheme, drawAlpha);
         }
 
         if (headParticlesEnabled) {

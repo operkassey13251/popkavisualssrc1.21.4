@@ -133,10 +133,11 @@ public class Notifications extends InterfaceProcessing {
             ms.scale(scale, scale, 1.0f);
             ms.translate(-cx, -cy, 0);
 
-            RenderUtils.drawDefaultHudPanel(ms, x, renderY, previewWidth, height, 3f, 3.5f, base, top, bottom);
-            float squareAlpha = alpha * alpha * (3.0f - 2.0f * alpha);
-            if (drawSquares && squareAlpha > 0.08f) {
-                RenderUtils.drawHudSquarePattern(ms, x, renderY, previewWidth, height, ColorUtils.setAlphaColor(colorTheme, (int) (255 * squareAlpha)));
+            if (drawSquares) {
+                RenderUtils.drawLiquidGlassPanel(ms, x, renderY, previewWidth, height, 3f, 3.5f, colorTheme, alpha);
+            } else {
+                RenderUtils.drawDefaultHudPanel(ms, x, renderY, previewWidth, height, 3f, 3.5f, base, top, bottom);
+                RenderUtils.drawShimmeringOutline(ms, x, renderY, previewWidth, height, 3.5f, colorTheme, alpha);
             }
 
             int textColor = ColorUtils.setAlphaColor(-1, (int) (255 * alpha));
@@ -201,10 +202,11 @@ public class Notifications extends InterfaceProcessing {
             ms.scale(scale, scale, 1.0f);
             ms.translate(-cx, -cy, 0);
 
-            RenderUtils.drawDefaultHudPanel(ms, x, renderY, width, height, 3f, 3.5f, base, top, bottom);
-            float squareAlpha = alpha * alpha * (3.0f - 2.0f * alpha);
-            if (drawSquares && squareAlpha > 0.08f) {
-                RenderUtils.drawHudSquarePattern(ms, x, renderY, width, height, ColorUtils.setAlphaColor(colorTheme, (int) (255 * squareAlpha)));
+            if (drawSquares) {
+                RenderUtils.drawLiquidGlassPanel(ms, x, renderY, width, height, 3f, 3.5f, colorTheme, alpha);
+            } else {
+                RenderUtils.drawDefaultHudPanel(ms, x, renderY, width, height, 3f, 3.5f, base, top, bottom);
+                RenderUtils.drawShimmeringOutline(ms, x, renderY, width, height, 3.5f, colorTheme, alpha);
             }
 
             int textColor = ColorUtils.setAlphaColor(-1, (int) (255 * alpha));

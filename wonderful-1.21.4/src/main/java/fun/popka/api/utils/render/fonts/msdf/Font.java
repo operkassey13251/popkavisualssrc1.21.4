@@ -480,6 +480,10 @@ public class Font implements QClient {
         return font;
     }
 
+    public float getBaselineHeight() {
+        return font.getBaselineHeight();
+    }
+
     public float getSize() {
         return size;
     }

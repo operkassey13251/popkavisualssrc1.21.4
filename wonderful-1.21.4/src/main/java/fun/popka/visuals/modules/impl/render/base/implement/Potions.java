@@ -188,10 +188,10 @@ public class Potions extends InterfaceProcessing {
 
         if (isUnusualRectType()) {
             RenderUtils.drawLiquidGlassPanel(eventRender.getContext().getMatrices(), x, y, width, height, 3.0f, 3.5f, colorTheme);
-            RenderUtils.drawHudSquarePattern(eventRender.getContext().getMatrices(), x, y, width, height, colorTheme);
             RenderUtils.drawRoundedRect(eventRender.getContext().getMatrices(), x + width - 14.5f, y + 3.0f, 10.0f, 10.0f, 2.0f, ColorUtils.darken(colorTheme, 0.4f));
         } else {
             RenderUtils.drawDefaultHudElementRects(eventRender.getContext().getMatrices(), x, y, width, height, colorTheme, false);
+            RenderUtils.drawShimmeringOutline(eventRender.getContext().getMatrices(), x, y, width, height, 3.5f, colorTheme, 1.0f);
         }
         issue(14).draw(eventRender.getContext().getMatrices(), "Effects", x + 5, y + 6f, -1);
         icon(13).draw(eventRender.getContext().getMatrices(), "d", x + width - 12.5f, y + 7.5f, colorTheme);

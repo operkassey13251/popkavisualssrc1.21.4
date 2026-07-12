@@ -54,9 +54,11 @@ public class Information extends InterfaceProcessing {
         float widthCords = font.getWidth(coordsText);
         float totalWidth = 13 + widthCords + widthbps + 2 + 13.8f;
 
-        RenderUtils.drawDefaultHudThemedPanel(eventRender.getContext().getMatrices(), x, y, totalWidth, height, 3f, 3.5f, colorTheme);
         if (drawSquares) {
-            RenderUtils.drawHudSquarePattern(eventRender.getContext().getMatrices(), x, y, totalWidth, height, colorTheme);
+            RenderUtils.drawLiquidGlassPanel(eventRender.getContext().getMatrices(), x, y, totalWidth, height, 3f, 3.5f, colorTheme);
+        } else {
+            RenderUtils.drawDefaultHudThemedPanel(eventRender.getContext().getMatrices(), x, y, totalWidth, height, 3f, 3.5f, colorTheme);
+            RenderUtils.drawShimmeringOutline(eventRender.getContext().getMatrices(), x, y, totalWidth, height, 3.5f, colorTheme, 1.0f);
         }
 
         float speedTextX = x + 13.5f;

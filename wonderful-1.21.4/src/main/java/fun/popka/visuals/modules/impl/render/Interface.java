@@ -21,6 +21,7 @@ import fun.popka.visuals.modules.impl.render.base.InterfaceProcessing;
 import fun.popka.visuals.modules.impl.render.base.implement.*;
 import fun.popka.visuals.modules.settings.implement.BooleanSetting;
 import fun.popka.visuals.modules.settings.implement.ListSetting;
+import fun.popka.visuals.modules.settings.implement.ModeSetting;
 
 import java.util.LinkedHashMap;
 import java.util.Locale;
@@ -79,9 +80,12 @@ public class Interface extends Module {
             new BooleanSetting("Стафф", true),
             new BooleanSetting("Информация", true));
 
+    private final ModeSetting fontMode = new ModeSetting("Шрифт", "Suisse", "Suisse", "Minecraft");
+
     public Interface() {
         super("Interface", "Интерфейс клиента", ModuleCategory.RENDER);
-        addSettings(hudModules);
+        addSettings(hudModules, fontMode);
+        Fonts.setVanillaFontSupplier(() -> fontMode.is("Minecraft"));
         this.waterMark = new WaterMark(Popka.draggable(this, "WaterMark", 10, 10));
         this.arrayListHud = new ArrayListHud(Popka.draggable(this, "ArrayList", 5, 24));
         this.keyBinds = new KeyBinds(Popka.draggable(this, "KeyBinds", 30, 30));

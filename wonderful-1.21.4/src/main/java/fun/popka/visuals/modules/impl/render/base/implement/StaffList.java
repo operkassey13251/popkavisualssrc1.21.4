@@ -90,13 +90,11 @@ public class StaffList extends InterfaceProcessing {
     }
 
     private void initFonts() {
-        if (font10 == null) {
-            font10 = Fonts.getFont("suisse", 10);
-            font12 = Fonts.getFont("suisse", 12);
-            font14 = Fonts.getFont("suisse", 14);
-            font16 = Fonts.getFont("suisse", 16);
-            iconFont = Fonts.getFont("icon", 13);
-        }
+        font10 = Fonts.getFont("suisse", 10);
+        font12 = Fonts.getFont("suisse", 12);
+        font14 = Fonts.getFont("suisse", 14);
+        font16 = Fonts.getFont("suisse", 16);
+        iconFont = Fonts.getFont("icon", 13);
     }
 
     @Override
