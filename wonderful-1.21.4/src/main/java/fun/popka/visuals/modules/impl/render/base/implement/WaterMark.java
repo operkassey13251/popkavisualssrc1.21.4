@@ -15,6 +15,9 @@ import java.awt.*;
 
 public class WaterMark extends InterfaceProcessing {
     private static final Identifier ICON_TEXTURE = Identifier.of("popka", "textures/watermark/icon.png");
+    private static final Identifier PING_ICON_TEXTURE = Identifier.of("popka", "textures/watermark/ping.png");
+    private static final Identifier TPS_ICON_TEXTURE = Identifier.of("popka", "textures/watermark/tps.png");
+    private static final Identifier FPS_ICON_TEXTURE = Identifier.of("popka", "textures/watermark/fps.png");
 
     private boolean showFps = true;
     private boolean showMs = true;
@@ -76,9 +79,6 @@ public class WaterMark extends InterfaceProcessing {
         float x = draggable.getX();
         float y = draggable.getY();
         var iconNew14 = Fonts.getFont("iconnew", 14);
-        var icon14 = Fonts.getFont("icon", 14);
-        var statsIconFont = Fonts.getFont("popka", 14);
-        if (statsIconFont == null) statsIconFont = iconNew14 != null ? iconNew14 : icon14;
         var suisse13 = Fonts.getFont("suisse", 13);
 
         int themeColor;
@@ -128,11 +128,10 @@ public class WaterMark extends InterfaceProcessing {
 
         String userIconGlyph = "e";
         String serverIconGlyph = "n";
-        String pingIconGlyph = "f";
-        String fpsIconGlyph = "j";
-        String tpsIconGlyph = "y";
 
         float iconSquareSize = 14f;
+        float smallIconSize = 8f;
+        float smallIconY = y + (panelH - smallIconSize) / 2f;
 
         float contentW = pad;
         contentW += iconSquareSize + pad;
@@ -147,17 +146,17 @@ public class WaterMark extends InterfaceProcessing {
             leftContentW += suisse13.getStringWidth(serverIP) + pad;
         }
         if (showFps) {
-            leftContentW += statsIconFont != null ? statsIconFont.getStringWidth(fpsIconGlyph) + 2f : 0f;
+            leftContentW += smallIconSize + 2f;
             leftContentW += suisse13.getStringWidth(fpsText) + pad;
         }
         if (showTps) {
-            leftContentW += statsIconFont != null ? statsIconFont.getStringWidth(tpsIconGlyph) + 2f : 0f;
+            leftContentW += smallIconSize + 2f;
             leftContentW += suisse13.getStringWidth(tpsText) + pad;
         }
 
         float rightContentW = 0f;
         if (showMs) {
-            rightContentW += statsIconFont != null ? statsIconFont.getStringWidth(pingIconGlyph) + 2f : 0f;
+            rightContentW += smallIconSize + 2f;
             rightContentW += suisse13.getStringWidth(pingText) + pad;
         }
 
@@ -206,20 +205,16 @@ public class WaterMark extends InterfaceProcessing {
         }
 
         if (showFps) {
-            if (statsIconFont != null) {
-                statsIconFont.drawGradientStringHorizontal(matrices, fpsIconGlyph, drawX, contentY, grayColor, grayColor);
-                drawX += statsIconFont.getStringWidth(fpsIconGlyph) + 2f;
-            }
+            RenderUtils.drawImage(matrices, FPS_ICON_TEXTURE, drawX, smallIconY, smallIconSize, smallIconSize, grayColor);
+            drawX += smallIconSize + 2f;
             suisse13.drawString(matrices, fpsValue, drawX, contentY, whiteColor);
             suisse13.drawString(matrices, fpsSuffix, drawX + suisse13.getStringWidth(fpsValue) - 1, contentY, themeColor);
             drawX += suisse13.getStringWidth(fpsText) + pad;
         }
 
         if (showTps) {
-            if (statsIconFont != null) {
-                statsIconFont.drawGradientStringHorizontal(matrices, tpsIconGlyph, drawX, contentY, grayColor, grayColor);
-                drawX += statsIconFont.getStringWidth(tpsIconGlyph) + 2f;
-            }
+            RenderUtils.drawImage(matrices, TPS_ICON_TEXTURE, drawX, smallIconY, smallIconSize, smallIconSize, grayColor);
+            drawX += smallIconSize + 2f;
             suisse13.drawString(matrices, tpsValue, drawX, contentY, whiteColor);
             suisse13.drawString(matrices, tpsSuffix, drawX + suisse13.getStringWidth(tpsValue) - 1, contentY, themeColor);
             drawX += suisse13.getStringWidth(tpsText) + pad;
@@ -231,10 +226,8 @@ public class WaterMark extends InterfaceProcessing {
             pingDrawX -= pingTextW;
             suisse13.drawString(matrices, pingValue, pingDrawX, contentY, whiteColor);
             suisse13.drawString(matrices, pingSuffix, pingDrawX + suisse13.getStringWidth(pingValue) - 0.5f, contentY, themeColor);
-            if (statsIconFont != null) {
-                pingDrawX -= statsIconFont.getStringWidth(pingIconGlyph) + 2f;
-                statsIconFont.drawGradientStringHorizontal(matrices, pingIconGlyph, pingDrawX, contentY, grayColor, grayColor);
-            }
+            pingDrawX -= smallIconSize + 2f;
+            RenderUtils.drawImage(matrices, PING_ICON_TEXTURE, pingDrawX, smallIconY, smallIconSize, smallIconSize, grayColor);
         }
 
         draggable.setWidth(panelW);

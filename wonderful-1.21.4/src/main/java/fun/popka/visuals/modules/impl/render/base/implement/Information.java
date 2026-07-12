@@ -11,7 +11,12 @@ import fun.popka.api.utils.render.fonts.msdf.Font;
 import fun.popka.api.utils.render.fonts.msdf.Fonts;
 import fun.popka.visuals.modules.impl.render.base.InterfaceProcessing;
 
+import net.minecraft.util.Identifier;
+
 public class Information extends InterfaceProcessing {
+
+    private static final Identifier INFO_ICON_TEXTURE = Identifier.of("popka", "textures/hud/info.png");
+    private static final Identifier COORDS_ICON_TEXTURE = Identifier.of("popka", "textures/hud/coords.png");
 
     public Information(Draggable draggable) {
         super(draggable);
@@ -26,8 +31,6 @@ public class Information extends InterfaceProcessing {
     public void DefaultStyle(EventRender.Default eventRender) {
         float x = draggable.getX(), y = draggable.getY();
         Font font = Fonts.getFont("suisse", 13);
-        Font iconFont = Fonts.getFont("icon", 16);
-        Font smallIconFont = Fonts.getFont("icon", 15);
 
         int colorTheme;
         if (!Popka.INSTANCE.themeStorage.getThemes().getTheme().getName().equals("Rainbow")) {
@@ -77,8 +80,8 @@ public class Information extends InterfaceProcessing {
         font.draw(eventRender.getContext().getMatrices(), zValue, coordsX, y + 6.6, -1);
         coordsX += font.getWidth(zValue);
         font.draw(eventRender.getContext().getMatrices(), "z", coordsX - 1, y + 6.6, colorTheme);
-        iconFont.draw(eventRender.getContext().getMatrices(), "c", x + 3.25, y + 6.6, colorTheme);
-        smallIconFont.draw(eventRender.getContext().getMatrices(), "x", xbps - 1, y + 6.85, colorTheme);
+        RenderUtils.drawImage(eventRender.getContext().getMatrices(), INFO_ICON_TEXTURE, x + 3.25f, y + 4f, 8f, 8f, colorTheme);
+        RenderUtils.drawImage(eventRender.getContext().getMatrices(), COORDS_ICON_TEXTURE, xbps - 1, y + 4f, 8f, 8f, colorTheme);
 
 
         draggable.setHeight(height);

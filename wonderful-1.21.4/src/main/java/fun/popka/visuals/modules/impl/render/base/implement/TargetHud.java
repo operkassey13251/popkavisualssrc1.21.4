@@ -370,7 +370,7 @@ public class TargetHud extends InterfaceProcessing {
         float headSize = 27.5f;
         float gap = 5.0f;
         float rightPad = 6.0f;
-        float height = 32.0f;
+        float height = healthBarStyleEnabled ? 36.0f : 32.0f;
 
         float width;
         float headX;
@@ -381,19 +381,24 @@ public class TargetHud extends InterfaceProcessing {
         float circleBoxX = 0f;
         float circleCenterX = 0f;
         float circleCenterY = 0f;
+        float outerCircleDiameter = 0f;
+        float outerCircleBoxX = 0f;
 
         if (healthBarStyleEnabled) {
+            rightPad = 4.0f;
             circleDiameter = 26.0f;
+            outerCircleDiameter = 34.0f;
             float nameWidth = issue(14).getWidth(name);
             float textWidth = nameWidth;
-            width = Math.max(108.0f, padding + headSize + gap + textWidth + gap + circleDiameter + rightPad);
+            width = Math.max(108.0f, padding + headSize + gap + textWidth + gap + outerCircleDiameter + rightPad);
             headX = x + padding;
             headY = y + (height - headSize) / 2.0f;
-            circleBoxX = x + width - rightPad - circleDiameter;
-            circleCenterX = circleBoxX + circleDiameter / 2.0f;
+            outerCircleBoxX = x + width - rightPad - outerCircleDiameter;
+            circleCenterX = outerCircleBoxX + outerCircleDiameter / 2.0f;
             circleCenterY = y + height / 2.0f;
+            circleBoxX = circleCenterX - circleDiameter / 2.0f;
             float textAreaStart = headX + headSize + gap;
-            float textAreaEnd = circleBoxX - gap;
+            float textAreaEnd = outerCircleBoxX - gap;
             textX = (textAreaStart + textAreaEnd) / 2.0f;
             textMaxWidth = Math.max(10.0f, textAreaEnd - textAreaStart);
         } else {
@@ -460,7 +465,21 @@ public class TargetHud extends InterfaceProcessing {
                 RenderUtils.drawRingArc(matrices, circleBoxX, circleBoxY, circleDiameter, circleThickness, -90.0f, healthEndAngle, circleColor);
             }
 
-            String healthNum = String.format("%.0f", animatedHealthValue);
+            if (goldenAlpha > 0.01f) {
+                float outerThickness = 2.2f;
+                float outerBoxY = circleCenterY - outerCircleDiameter / 2.0f;
+                int goldenBaseColor = ColorUtils.rgba(236, 183, 39, 255);
+                int goldenFgColor = ColorUtils.applyAlpha(goldenBaseColor, drawAlpha * goldenAlpha);
+                int goldenBgColor = ColorUtils.applyAlpha(ColorUtils.darken(goldenBaseColor, 0.72f), drawAlpha * goldenAlpha * 0.26f);
+                RenderUtils.drawRingArc(matrices, outerCircleBoxX, outerBoxY, outerCircleDiameter, outerThickness, -90.0f, 270.0f, goldenBgColor);
+                if (goldenProgressAnimated > 0.0f) {
+                    float goldenEndAngle = -90.0f + 360.0f * goldenProgressAnimated;
+                    RenderUtils.drawRingArc(matrices, outerCircleBoxX, outerBoxY, outerCircleDiameter, outerThickness, -90.0f, goldenEndAngle, goldenFgColor);
+                }
+            }
+
+            float totalHealthValue = animatedHealthValue + animatedABValue;
+            String healthNum = String.format("%.0f", totalHealthValue);
             issue(15).drawCenteredString(matrices, healthNum, circleCenterX, circleCenterY - 3.5f, ColorUtils.rgba(255, 255, 255, drawAlphaInt));
         } else {
             issue(14).drawStringWithFade(matrices, name, textX + 0.7f, y + 5.5f, textMaxWidth, ColorUtils.rgba(255, 255, 255, drawAlphaInt));
