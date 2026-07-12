@@ -25,6 +25,7 @@ import java.util.Map;
 public class ConfigStorage {
 
     public String currentConfig = "default";
+    public String clickGuiStyle = "DROPDOWN";
     private final String extension = ".popka";
 
     public ConfigStorage() {
@@ -60,6 +61,7 @@ public class ConfigStorage {
         object.add("config", new JsonPrimitive(config));
         object.add("theme", new JsonPrimitive(Popka.INSTANCE.themeStorage.getThemes().name()));
         object.add("language", new JsonPrimitive(Popka.INSTANCE.localizationStorage.getLanguage().name()));
+        object.add("clickGuiStyle", new JsonPrimitive(clickGuiStyle));
         object.add("modules", serializeModules());
         object.add("draggables", serializeDraggables());
         object.add("hud", serializeHudState());
@@ -126,6 +128,10 @@ public class ConfigStorage {
             }
         }
 
+        if (object.has("clickGuiStyle")) {
+            clickGuiStyle = object.get("clickGuiStyle").getAsString();
+        }
+
         if (object.has("draggables")) {
             deserializeDraggables(object.get("draggables").getAsJsonObject());
         }
@@ -149,6 +155,7 @@ public class ConfigStorage {
 
         object.add("theme", new JsonPrimitive(Popka.INSTANCE.themeStorage.getThemes().name()));
         object.add("language", new JsonPrimitive(Popka.INSTANCE.localizationStorage.getLanguage().name()));
+        object.add("clickGuiStyle", new JsonPrimitive(clickGuiStyle));
 
         object.add("draggables", serializeDraggables());
         object.add("hud", serializeHudState());
@@ -202,6 +209,10 @@ public class ConfigStorage {
                 Popka.INSTANCE.localizationStorage.setLanguage(LocalizationStorage.Language.valueOf(object.get("language").getAsString()));
             } catch (Exception ignored) {
             }
+        }
+
+        if (object.has("clickGuiStyle")) {
+            clickGuiStyle = object.get("clickGuiStyle").getAsString();
         }
 
         if (object.has("draggables")) {

@@ -16,16 +16,17 @@ import fun.popka.visuals.ui.clickgui.ClickGuiInputHandler;
 import fun.popka.visuals.ui.clickgui.ClickGuiRenderer;
 import fun.popka.visuals.ui.clickgui.ClickGuiSettingRenderer;
 import fun.popka.visuals.ui.clickgui.ClickGuiState;
-import fun.popka.visuals.ui.clickgui.ClickGuiThemeSelector;
+import fun.popka.visuals.ui.clickgui.ClickGuiStyle;
+import fun.popka.visuals.ui.clickgui.ClickGuiThemePanel;
 
 public class MenuPanel extends Screen implements QClient {
     private static final ClickGuiState SHARED_STATE = new ClickGuiState();
     private final int categoryCount = Module.ModuleCategory.values().length;
     private final ClickGuiState state = SHARED_STATE;
-    private final ClickGuiThemeSelector themeSelector = new ClickGuiThemeSelector();
-    private final ClickGuiRenderer renderer = new ClickGuiRenderer(state, new ClickGuiSettingRenderer(), themeSelector);
-    private final ClickGuiInputHandler inputHandler = new ClickGuiInputHandler(state, themeSelector);
+    private final ClickGuiRenderer renderer = new ClickGuiRenderer(state, new ClickGuiSettingRenderer());
+    private final ClickGuiInputHandler inputHandler = new ClickGuiInputHandler(state);
     private final ClickGuiConfigPanel configPanel = new ClickGuiConfigPanel(state);
+    private final ClickGuiThemePanel themePanel = new ClickGuiThemePanel(state);
     private final AnimationUtils openAnimation = new AnimationUtils(0f, 7.5f, Easings.CUBIC_OUT);
     private boolean closing;
     private boolean closeSoundPlayed;
@@ -70,6 +71,8 @@ public class MenuPanel extends Screen implements QClient {
         state.setRenderOffsetY(getPanelOffsetY(progress));
         configPanel.update(closing);
         configPanel.render(context, mouseX, mouseY, window, progress);
+        themePanel.update(closing);
+        themePanel.render(context, mouseX, mouseY, window, progress);
         renderer.render(context, mouseX, mouseY, window, progress);
 
         super.render(context, mouseX, mouseY, delta);
@@ -81,6 +84,9 @@ public class MenuPanel extends Screen implements QClient {
         syncLayout();
         state.setRenderOffsetY(getPanelOffsetY(getAnimationProgress()));
         if (configPanel.mouseClicked(mouseX, mouseY, button, getWindow())) {
+            return true;
+        }
+        if (themePanel.mouseClicked(mouseX, mouseY, button, getWindow())) {
             return true;
         }
         return inputHandler.mouseClicked(mouseX, mouseY, button, getWindow())
@@ -111,6 +117,9 @@ public class MenuPanel extends Screen implements QClient {
         if (configPanel.mouseScrolled(mouseX, mouseY, verticalAmount)) {
             return true;
         }
+        if (themePanel.mouseScrolled(mouseX, mouseY, verticalAmount)) {
+            return true;
+        }
         return inputHandler.mouseScrolled(mouseX, mouseY, verticalAmount)
                 || super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
     }
@@ -124,11 +133,33 @@ public class MenuPanel extends Screen implements QClient {
         if (inputHandler.keyPressed(keyCode, modifiers)) {
             return true;
         }
+        if (canToggleStyle() && keyCode == GLFW.GLFW_KEY_R) {
+            toggleStyle();
+            return true;
+        }
         if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
             startClosing();
             return true;
         }
         return super.keyPressed(keyCode, scanCode, modifiers);
+    }
+
+    private boolean canToggleStyle() {
+        return !configPanel.isTextInputActive()
+                && !state.isSearchActive()
+                && state.getBindingModule() == null
+                && state.getBindingSetting() == null;
+    }
+
+    private void toggleStyle() {
+        ClickGuiStyle next = state.getStyle() == ClickGuiStyle.DROPDOWN
+                ? ClickGuiStyle.NEW
+                : ClickGuiStyle.DROPDOWN;
+        state.setStyle(next);
+        Window window = getWindow();
+        if (window != null) {
+            state.updatePosition(window, categoryCount);
+        }
     }
 
     @Override
