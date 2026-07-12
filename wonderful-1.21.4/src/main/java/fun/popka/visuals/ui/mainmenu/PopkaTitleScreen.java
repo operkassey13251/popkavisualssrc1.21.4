@@ -1,5 +1,6 @@
 package fun.popka.visuals.ui.mainmenu;
 
+import fun.popka.api.utils.client.MenuMusicPlayer;
 import fun.popka.api.utils.render.fonts.ttf.Fonts;
 import fun.popka.api.utils.render.fonts.ttf.MCFontRenderer;
 import net.minecraft.client.gui.DrawContext;
@@ -29,6 +30,8 @@ public class PopkaTitleScreen extends Screen {
     protected void init() {
         this.clearChildren();
         this.buttonSpecs.clear();
+
+        MenuMusicPlayer.start();
 
         int buttonWidth = 200;
         int buttonHeight = 24;
@@ -63,6 +66,12 @@ public class PopkaTitleScreen extends Screen {
     @Override
     public boolean shouldCloseOnEsc() {
         return false;
+    }
+
+    @Override
+    public void removed() {
+        MenuMusicPlayer.stop();
+        super.removed();
     }
 
     @Override

@@ -25,7 +25,7 @@ import java.util.Map;
 public class ConfigStorage {
 
     public String currentConfig = "default";
-    private final String extension = ".wonder";
+    private final String extension = ".popka";
 
     public ConfigStorage() {
         loadAll();
@@ -72,6 +72,32 @@ public class ConfigStorage {
         }
 
         this.currentConfig = config;
+    }
+
+    public void deleteConfig(String config) throws Exception {
+        File file = new File(Popka.INSTANCE.configsDir, config + extension);
+        if (!file.exists()) return;
+        if (!file.delete()) throw new Exception("cannot delete " + config);
+        if (currentConfig.equals(config)) {
+            currentConfig = "default";
+            File defaultFile = new File(Popka.INSTANCE.configsDir, currentConfig + extension);
+            if (defaultFile.exists()) {
+                try { loadConfig(currentConfig); } catch (Exception ignored) {}
+            }
+        }
+    }
+
+    public void renameConfig(String oldName, String newName) throws Exception {
+        if (oldName == null || newName == null || oldName.equals(newName)) return;
+        File oldFile = new File(Popka.INSTANCE.configsDir, oldName + extension);
+        if (!oldFile.exists()) throw new Exception("config " + oldName + " not found");
+        File newFile = new File(Popka.INSTANCE.configsDir, newName + extension);
+        if (newFile.exists()) throw new Exception("config " + newName + " already exists");
+        boolean wasCurrent = currentConfig.equals(oldName);
+        loadConfig(oldName);
+        saveConfig(newName);
+        if (!oldFile.delete()) throw new Exception("cannot remove old config file");
+        if (wasCurrent) currentConfig = newName;
     }
 
     
