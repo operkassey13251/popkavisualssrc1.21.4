@@ -66,7 +66,7 @@ public class TargetESP extends Module {
     private final FloatSetting bmwGhostLife = new FloatSetting("Время жизни (мс)", 350.0f, 150.0f, 500.0f, 25.0f);
     private final FloatSetting bmwStrengthXZ = new FloatSetting("Цикл XZ", 2000.0f, 1000.0f, 5000.0f, 100.0f);
     private final FloatSetting bmwStrengthY = new FloatSetting("Цикл Y", 1700.0f, 1000.0f, 5000.0f, 100.0f);
-    private final FloatSetting boltCount = new FloatSetting("Кол-во молний", 5.0f, 1.0f, 12.0f, 1.0f).visible(() -> mode.is("Молнии"));
+    private final FloatSetting boltCount = new FloatSetting("Кол-во молний", 5.0f, 1.0f, 30.0f, 1.0f).visible(() -> mode.is("Молнии"));
     private final FloatSetting boltSegments = new FloatSetting("Сегменты молнии", 10.0f, 4.0f, 30.0f, 1.0f).visible(() -> mode.is("Молнии"));
     private final FloatSetting boltJitter = new FloatSetting("Разброс молнии", 0.25f, 0.05f, 1.0f, 0.05f).visible(() -> mode.is("Молнии"));
     private final FloatSetting boltRefresh = new FloatSetting("Частота молнии", 90.0f, 10.0f, 400.0f, 5.0f).visible(() -> mode.is("Молнии"));
@@ -79,6 +79,7 @@ public class TargetESP extends Module {
     private final java.util.Random boltRandom = new java.util.Random();
     private long lastBoltRefresh = 0L;
     private long lastBoltTime = 0L;
+    private final java.util.List<Bolt> activeBolts = new java.util.ArrayList<>();
     private float appearValue = 0f;
     private float scaleValue = 0f;
     private float rotProgress = 0f;
@@ -132,6 +133,7 @@ public class TargetESP extends Module {
         renderCubeParticles.clear();
         lastBoltRefresh = 0L;
         lastBoltTime = 0L;
+        activeBolts.clear();
         super.onDisable();
     }
 
@@ -1092,34 +1094,45 @@ public class TargetESP extends Module {
         if (lastTargetPos == null) return;
 
         Vec3d camPos = mc.gameRenderer.getCamera().getPos();
-        float tickDelta = event.getTickDelta();
-
-        Vec3d targetPos = lastTargetPos.add(0, lastTargetHeight * 0.5f, 0);
-        Vec3d sourcePos = mc.player.getCameraPosVec(tickDelta);
-
         long now = System.currentTimeMillis();
-        long refreshMs = Math.max(10L, (long) boltRefresh.get());
-        boolean refresh = (now - lastBoltRefresh) >= refreshMs;
-        if (refresh) lastBoltRefresh = now;
 
-        int boltN = Math.max(1, Math.round(boltCount.get()));
-        int segN = Math.max(2, Math.round(boltSegments.get()));
+        Vec3d targetCenter = lastTargetPos.add(0, lastTargetHeight * 0.5f, 0);
+        float targetH = lastTargetHeight;
+        float targetW = lastTargetWidth;
+
+        long refreshMs = Math.max(10L, (long) boltRefresh.get());
+        int maxBolts = Math.max(2, Math.round(boltCount.get()));
+        int segN = Math.max(4, Math.round(boltSegments.get()));
         float jit = boltJitter.get();
+        boolean branches = boltBranches.isState();
+        float speedFactor = Math.max(0.1f, boltSpeed.get());
+        float volume = boltVolume.get();
+
+        if (hasTarget && (now - lastBoltRefresh) >= refreshMs) {
+            lastBoltRefresh = now;
+            int spawnCount = 1 + boltRandom.nextInt(2);
+            for (int i = 0; i < spawnCount; i++) {
+                if (activeBolts.size() >= maxBolts) break;
+                long seed = boltRandom.nextLong();
+                java.util.List<LightningSegment> segs = new java.util.ArrayList<>();
+                generateWrappingLightning(segs, targetCenter, targetH, targetW,
+                        segN, jit, seed, branches, volume);
+                long life = (long) (170L / speedFactor) + (long) boltRandom.nextInt(90);
+                activeBolts.add(new Bolt(segs, now, life, seed));
+            }
+        }
+
+        activeBolts.removeIf(bolt -> (now - bolt.spawnTime) >= bolt.lifetime);
+
+        if (activeBolts.isEmpty()) return;
+
         float lineW = boltWidth.get();
         boolean glow = boltGlow.isState();
-        boolean branches = boltBranches.isState();
-
         float hurtPC = getHurtPC(hasTarget ? target : lastTarget);
         int baseColor = getLightningColor(hurtPC);
         int r = (baseColor >> 16) & 0xFF;
         int g = (baseColor >> 8) & 0xFF;
         int b = baseColor & 0xFF;
-
-        java.util.List<LightningSegment> allSegments = new java.util.ArrayList<>();
-        for (int bi = 0; bi < boltN; bi++) {
-            long seed = refresh ? boltRandom.nextLong() : (lastBoltRefresh * 31L + bi * 7L + 1234567L);
-            collectBoltSegments(allSegments, sourcePos, targetPos, segN, jit, seed, branches, 0);
-        }
 
         MatrixStack matrices = event.getMatrices();
         matrices.push();
@@ -1134,18 +1147,9 @@ public class TargetESP extends Module {
             GL11.glEnable(GL11.GL_LINE_SMOOTH);
             GL11.glHint(GL11.GL_LINE_SMOOTH_HINT, GL11.GL_NICEST);
 
-            if (glow) {
-                RenderSystem.blendFuncSeparate(
-                        GlStateManager.SrcFactor.SRC_ALPHA,
-                        GlStateManager.DstFactor.ONE,
-                        GlStateManager.SrcFactor.ONE,
-                        GlStateManager.DstFactor.ZERO);
-                drawBoltPass(matrices, allSegments, lineW * 3.5f, 0.10f, r, g, b);
-                drawBoltPass(matrices, allSegments, lineW * 2.0f, 0.22f, r, g, b);
-                drawBoltPass(matrices, allSegments, lineW * 1.2f, 0.45f, r, g, b);
+            for (Bolt bolt : activeBolts) {
+                renderBolt(matrices, bolt, now, lineW, glow, r, g, b);
             }
-            RenderSystem.defaultBlendFunc();
-            drawBoltPass(matrices, allSegments, lineW, 1.0f, r, g, b);
         } finally {
             RenderSystem.lineWidth(1.0f);
             GL11.glDisable(GL11.GL_LINE_SMOOTH);
@@ -1159,10 +1163,78 @@ public class TargetESP extends Module {
         }
     }
 
+    private void renderBolt(MatrixStack matrices, Bolt bolt, long now, float lineW,
+                            boolean glow, int r, int g, int b) {
+        float age = MathHelper.clamp((now - bolt.spawnTime) / (float) bolt.lifetime, 0f, 1f);
+        float alpha;
+        if (age < 0.12f) {
+            alpha = age / 0.12f;
+        } else if (age > 0.6f) {
+            alpha = Math.max(0f, (1f - age) / 0.4f);
+        } else {
+            alpha = 1f;
+        }
+        if (boltFlicker.isState()) {
+            float flick = 0.65f + 0.35f * (float) Math.sin((now - bolt.spawnTime) * 0.06 + bolt.seed);
+            alpha *= flick;
+        }
+        if (alpha <= 0.01f) return;
+
+        if (glow) {
+            RenderSystem.blendFuncSeparate(
+                    GlStateManager.SrcFactor.SRC_ALPHA,
+                    GlStateManager.DstFactor.ONE,
+                    GlStateManager.SrcFactor.ONE,
+                    GlStateManager.DstFactor.ZERO);
+            drawBoltPass(matrices, bolt.segments, lineW * 22.0f, 0.10f * alpha, r, g, b);
+            drawBoltPass(matrices, bolt.segments, lineW * 17.0f, 0.18f * alpha, r, g, b);
+            drawBoltPass(matrices, bolt.segments, lineW * 13.0f, 0.28f * alpha, r, g, b);
+            drawBoltPass(matrices, bolt.segments, lineW * 9.5f, 0.42f * alpha, r, g, b);
+            drawBoltPass(matrices, bolt.segments, lineW * 7.0f, 0.62f * alpha, r, g, b);
+            drawBoltPass(matrices, bolt.segments, lineW * 5.0f, 0.92f * alpha, r, g, b);
+            drawBoltPass(matrices, bolt.segments, lineW * 3.4f, 1.5f * alpha, r, g, b);
+            drawBoltPass(matrices, bolt.segments, lineW * 2.3f, 2.5f * alpha, r, g, b);
+            drawBoltPass(matrices, bolt.segments, lineW * 1.5f, 4.0f * alpha, r, g, b);
+            RenderSystem.defaultBlendFunc();
+        }
+        int wr = (int) (r + (255 - r) * 0.7f);
+        int wg = (int) (g + (255 - g) * 0.7f);
+        int wb = (int) (b + (255 - b) * 0.7f);
+        drawBoltPass(matrices, bolt.segments, lineW, alpha, wr, wg, wb);
+    }
+
+    private Vec3d pickWrapAnchor(Vec3d targetCenter, float height, float width,
+                                 double angle, double yProgress, float volume) {
+        double radius = width * 0.6 + Math.max(0.05, volume);
+        double y = (yProgress - 0.5) * height;
+        return targetCenter.add(Math.cos(angle) * radius, y, Math.sin(angle) * radius);
+    }
+
+    private void generateWrappingLightning(java.util.List<LightningSegment> out, Vec3d targetCenter,
+                                           float height, float width, int segN, float jitter,
+                                           long seed, boolean branches, float volume) {
+        java.util.Random rng = new java.util.Random(seed);
+        double startAngle = rng.nextDouble() * Math.PI * 2.0;
+        double angleSpan = (rng.nextDouble() * 0.5 + 0.6) * Math.PI * 2.0;
+        if (rng.nextBoolean()) angleSpan = -angleSpan;
+        int anchors = 3 + rng.nextInt(2);
+        java.util.List<Vec3d> anchorPoints = new java.util.ArrayList<>();
+        for (int i = 0; i <= anchors; i++) {
+            double t = (double) i / anchors;
+            double angle = startAngle + angleSpan * t;
+            anchorPoints.add(pickWrapAnchor(targetCenter, height, width, angle, t, volume));
+        }
+        int subSegN = Math.max(3, segN / 2);
+        for (int i = 0; i < anchorPoints.size() - 1; i++) {
+            generateRealLightning(out, anchorPoints.get(i), anchorPoints.get(i + 1),
+                    subSegN, jitter * 0.7f, rng.nextLong(), branches, 0);
+        }
+    }
+
     private void drawBoltPass(MatrixStack matrices, java.util.List<LightningSegment> segments,
                               float lineWidth, float alphaMul, int r, int g, int b) {
         if (segments.isEmpty()) return;
-        RenderSystem.lineWidth(Math.min(lineWidth, 12.0f));
+        RenderSystem.lineWidth(Math.min(lineWidth, 64.0f));
         int a = (int) MathHelper.clamp(255.0f * alphaMul, 0f, 255f);
         Matrix4f matrix = matrices.peek().getPositionMatrix();
         BufferBuilder buffer = Tessellator.getInstance().begin(VertexFormat.DrawMode.DEBUG_LINES, VertexFormats.POSITION_COLOR);
@@ -1173,8 +1245,8 @@ public class TargetESP extends Module {
         BufferRenderer.drawWithGlobalProgram(buffer.end());
     }
 
-    private void collectBoltSegments(java.util.List<LightningSegment> out, Vec3d start, Vec3d end,
-                                     int segCount, float jitterAmt, long seed, boolean branches, int depth) {
+    private void generateRealLightning(java.util.List<LightningSegment> out, Vec3d start, Vec3d end,
+                                       int detail, float jitter, long seed, boolean branches, int depth) {
         Vec3d dir = end.subtract(start);
         double length = dir.length();
         if (length < 1.0E-4) return;
@@ -1184,34 +1256,85 @@ public class TargetESP extends Module {
         Vec3d realUp = right.crossProduct(forward).normalize();
 
         java.util.Random rng = new java.util.Random(seed);
-        Vec3d[] points = new Vec3d[segCount + 1];
-        points[0] = start;
-        points[segCount] = end;
-        for (int i = 1; i < segCount; i++) {
-            double t = (double) i / (double) segCount;
-            double taper = Math.sin(t * Math.PI);
-            double bx = start.x + dir.x * t;
-            double by = start.y + dir.y * t;
-            double bz = start.z + dir.z * t;
-            double offR = (rng.nextDouble() * 2.0 - 1.0) * jitterAmt * taper;
-            double offU = (rng.nextDouble() * 2.0 - 1.0) * jitterAmt * taper;
-            points[i] = new Vec3d(bx + right.x * offR + realUp.x * offU,
-                    by + right.y * offR + realUp.y * offU,
-                    bz + right.z * offR + realUp.z * offU);
+        detail = MathHelper.clamp(detail, 1, 8);
+
+        java.util.List<Vec3d> points = new java.util.ArrayList<>();
+        points.add(start);
+        points.add(end);
+
+        double displacement = jitter * length * 0.18;
+        for (int iter = 0; iter < detail; iter++) {
+            java.util.List<Vec3d> newPoints = new java.util.ArrayList<>();
+            newPoints.add(points.get(0));
+            for (int i = 0; i < points.size() - 1; i++) {
+                Vec3d p1 = points.get(i);
+                Vec3d p2 = points.get(i + 1);
+                Vec3d mid = p1.add(p2).multiply(0.5);
+                double offR = (rng.nextDouble() * 2.0 - 1.0) * displacement;
+                double offU = (rng.nextDouble() * 2.0 - 1.0) * displacement;
+                mid = mid.add(right.multiply(offR)).add(realUp.multiply(offU));
+                newPoints.add(mid);
+                newPoints.add(p2);
+            }
+            points = newPoints;
+            displacement *= 0.52;
         }
-        for (int i = 0; i < segCount; i++) {
-            Vec3d p1 = points[i];
-            Vec3d p2 = points[i + 1];
+
+        java.util.List<Vec3d> renderPoints = roundCorners(points, 0.65f);
+        for (int i = 0; i < renderPoints.size() - 1; i++) {
+            Vec3d p1 = renderPoints.get(i);
+            Vec3d p2 = renderPoints.get(i + 1);
             out.add(new LightningSegment(
                     (float) p1.x, (float) p1.y, (float) p1.z,
                     (float) p2.x, (float) p2.y, (float) p2.z));
-            if (branches && depth < 2 && rng.nextFloat() < 0.18f && i > 1 && i < segCount - 1) {
-                Vec3d branchEnd = p2.add(right.multiply((rng.nextDouble() * 2.0 - 1.0) * jitterAmt * 1.5)
-                        .add(realUp.multiply((rng.nextDouble() * 2.0 - 1.0) * jitterAmt * 1.5)));
-                collectBoltSegments(out, p2, branchEnd, Math.max(2, segCount / 3), jitterAmt * 0.6f,
-                        rng.nextLong(), false, depth + 1);
+        }
+        for (int i = 0; i < points.size() - 1; i++) {
+            if (branches && depth < 2 && i > 1 && i < points.size() - 2 && rng.nextFloat() < 0.10f) {
+                Vec3d bp = points.get(i);
+                double branchLen = length * (0.12 + rng.nextDouble() * 0.18);
+                double bRight = (rng.nextDouble() * 2.0 - 1.0) * 0.8;
+                double bUp = (rng.nextDouble() * 2.0 - 1.0) * 0.8;
+                Vec3d branchDir = forward.add(right.multiply(bRight)).add(realUp.multiply(bUp)).normalize();
+                Vec3d branchEnd = bp.add(branchDir.multiply(branchLen));
+                generateRealLightning(out, bp, branchEnd, Math.max(2, detail - 2),
+                        jitter * 0.5f, rng.nextLong(), false, depth + 1);
             }
         }
+    }
+
+    private java.util.List<Vec3d> roundCorners(java.util.List<Vec3d> points, float roundFactor) {
+        if (points.size() < 3) return points;
+        java.util.List<Vec3d> out = new java.util.ArrayList<>();
+        out.add(points.get(0));
+        for (int i = 1; i < points.size() - 1; i++) {
+            Vec3d prev = points.get(i - 1);
+            Vec3d cur = points.get(i);
+            Vec3d next = points.get(i + 1);
+            Vec3d v1 = cur.subtract(prev);
+            double len1 = v1.length();
+            Vec3d v2 = next.subtract(cur);
+            double len2 = v2.length();
+            if (len1 < 1.0E-4 || len2 < 1.0E-4) {
+                out.add(cur);
+                continue;
+            }
+            double round = Math.min(len1, len2) * roundFactor;
+            Vec3d b1 = cur.subtract(v1.multiply(round / len1));
+            Vec3d b2 = cur.add(v2.multiply(round / len2));
+            out.add(b1);
+            int subdiv = 12;
+            for (int s = 1; s < subdiv; s++) {
+                float t = s / (float) subdiv;
+                float mt = 1.0f - t;
+                double x = mt * mt * b1.x + 2 * mt * t * cur.x + t * t * b2.x;
+                double y = mt * mt * b1.y + 2 * mt * t * cur.y + t * t * b2.y;
+                double z = mt * mt * b1.z + 2 * mt * t * cur.z + t * t * b2.z;
+                out.add(new Vec3d(x, y, z));
+            }
+            out.add(b2);
+        }
+        out.add(points.get(points.size() - 1));
+        return out;
     }
 
     private int getLightningColor(float hurtPC) {
@@ -1231,6 +1354,19 @@ public class TargetESP extends Module {
         LightningSegment(float x1, float y1, float z1, float x2, float y2, float z2) {
             this.x1 = x1; this.y1 = y1; this.z1 = z1;
             this.x2 = x2; this.y2 = y2; this.z2 = z2;
+        }
+    }
+
+    private static class Bolt {
+        final java.util.List<LightningSegment> segments;
+        final long spawnTime;
+        final long lifetime;
+        final long seed;
+        Bolt(java.util.List<LightningSegment> segments, long spawnTime, long lifetime, long seed) {
+            this.segments = segments;
+            this.spawnTime = spawnTime;
+            this.lifetime = lifetime;
+            this.seed = seed;
         }
     }
 }
