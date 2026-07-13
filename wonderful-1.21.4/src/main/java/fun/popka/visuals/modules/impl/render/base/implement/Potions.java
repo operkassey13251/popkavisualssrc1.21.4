@@ -5,6 +5,7 @@ import net.minecraft.client.texture.Sprite;
 import net.minecraft.entity.effect.StatusEffect;
 import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.registry.entry.RegistryEntry;
+import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
 import fun.popka.Popka;
 import fun.popka.api.events.implement.EventRender;
@@ -29,6 +30,8 @@ import java.util.Map;
 import java.util.Set;
 
 public class Potions extends InterfaceProcessing {
+    private static final Identifier EFFECTS_ICON_TEXTURE = Identifier.of("popka", "textures/hud/effects.png");
+
     private static final class PotionSnapshot {
         RegistryEntry<StatusEffect> entry;
         String baseName;
@@ -194,7 +197,7 @@ public class Potions extends InterfaceProcessing {
             RenderUtils.drawShimmeringOutline(eventRender.getContext().getMatrices(), x, y, width, height, 3.5f, colorTheme, 1.0f);
         }
         issue(14).draw(eventRender.getContext().getMatrices(), "Effects", x + 5, y + 6f, -1);
-        icon(13).draw(eventRender.getContext().getMatrices(), "d", x + width - 12.5f, y + 7.5f, colorTheme);
+        RenderUtils.drawImage(eventRender.getContext().getMatrices(), EFFECTS_ICON_TEXTURE, x + width - 13.5f, y + 4f, 8f, 8f, colorTheme);
 
         float offsetY = 18;
         for (StatusEffect type : renderOrder) {

@@ -2,6 +2,7 @@ package fun.popka.visuals.modules.impl.render.base.implement;
 
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.util.Identifier;
 import fun.popka.Popka;
 import fun.popka.api.events.implement.EventRender;
 import fun.popka.api.storages.implement.helpertstorages.enumvar.ModuleClass;
@@ -21,6 +22,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class KeyBinds extends InterfaceProcessing {
+    private static final Identifier BINDS_ICON_TEXTURE = Identifier.of("popka", "textures/hud/binds.png");
+
     private final Map<Module, AnimationUtils> animations = new HashMap<>();
     private final AnimationUtils widthAnimation = new AnimationUtils(60, 10.5f, Easings.QUAD_OUT);
 
@@ -124,9 +127,15 @@ public class KeyBinds extends InterfaceProcessing {
             RenderUtils.drawRoundedRect(matrices, x + width - 14.5f, y + 3.0f, 10.0f, 10.0f, 2.0f, ColorUtils.darken(colorTheme, 0.4f));
         } else {
             RenderUtils.drawDefaultHudElementRects(matrices, x, y, width, height, colorTheme, false);
+            int iridescentTL = ColorUtils.getThemeColor(0);
+            int iridescentTR = ColorUtils.getThemeColor(90);
+            int iridescentBR = ColorUtils.getThemeColor(180);
+            int iridescentBL = ColorUtils.getThemeColor(270);
+            RenderUtils.drawRoundedRectOutline(matrices, x, y, width, height, 3.5f, 1.0f,
+                    iridescentTL, iridescentTR, iridescentBL, iridescentBR);
         }
         issue(14).draw(matrices, "Binds", x + 5, y + 6f, -1);
-        icon(13).draw(matrices, "f", rightEdge - 13f, y + 7.5f, colorTheme);
+        RenderUtils.drawImage(matrices, BINDS_ICON_TEXTURE, rightEdge - 13.5f, y + 4f, 8f, 8f, colorTheme);
 
         float offsetY = 18;
         for (Module module : ModuleClass.INSTANCE.getObject()) {

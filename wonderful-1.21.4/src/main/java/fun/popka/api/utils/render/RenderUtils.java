@@ -91,7 +91,6 @@ public class RenderUtils implements QClient {
 
         if (topLeftColorUniform != null) {
             int a = (topLeftColor >> 24) & 0xFF;
-            if (a == 0) a = 255;
             topLeftColorUniform.set(
                     ((topLeftColor >> 16) & 0xFF) / 255f,
                     ((topLeftColor >> 8) & 0xFF) / 255f,
@@ -102,7 +101,6 @@ public class RenderUtils implements QClient {
 
         if (topRightColorUniform != null) {
             int a = (topRightColor >> 24) & 0xFF;
-            if (a == 0) a = 255;
             topRightColorUniform.set(
                     ((topRightColor >> 16) & 0xFF) / 255f,
                     ((topRightColor >> 8) & 0xFF) / 255f,
@@ -113,7 +111,6 @@ public class RenderUtils implements QClient {
 
         if (bottomLeftColorUniform != null) {
             int a = (bottomLeftColor >> 24) & 0xFF;
-            if (a == 0) a = 255;
             bottomLeftColorUniform.set(
                     ((bottomLeftColor >> 16) & 0xFF) / 255f,
                     ((bottomLeftColor >> 8) & 0xFF) / 255f,
@@ -124,7 +121,6 @@ public class RenderUtils implements QClient {
 
         if (bottomRightColorUniform != null) {
             int a = (bottomRightColor >> 24) & 0xFF;
-            if (a == 0) a = 255;
             bottomRightColorUniform.set(
                     ((bottomRightColor >> 16) & 0xFF) / 255f,
                     ((bottomRightColor >> 8) & 0xFF) / 255f,
@@ -670,7 +666,7 @@ public class RenderUtils implements QClient {
 
     public void drawLiquidGlassPanel(MatrixStack matrices, float x, float y, float width, float height,
                                      float gradientRadius, float borderRadius, int themeColor, float globalAlpha) {
-        if (globalAlpha <= 0.01f) return;
+        if (globalAlpha <= 0.04f) return;
 
         int blurColor = ColorUtils.applyAlpha(-1, globalAlpha);
         drawBlur(matrices, x, y, width, height, borderRadius, 8.0f, blurColor);
