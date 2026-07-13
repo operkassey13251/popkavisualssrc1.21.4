@@ -9,6 +9,7 @@ import fun.popka.visuals.modules.impl.player.*;
 import fun.popka.visuals.modules.impl.render.*;
 
 public interface ModuleRewords {
+    ClickGui clickGui = ClickGui.INSTANCE;
     Arrows arrows = Arrows.INSTANCE;
     Aura aura = Aura.INSTANCE;
     AntiBot antibot = AntiBot.INSTANCE;
