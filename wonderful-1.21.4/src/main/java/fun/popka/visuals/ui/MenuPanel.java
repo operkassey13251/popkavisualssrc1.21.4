@@ -11,6 +11,7 @@ import fun.popka.api.utils.animation.AnimationUtils;
 import fun.popka.api.utils.animation.Easings;
 import fun.popka.api.utils.client.ClientSoundPlayer;
 import fun.popka.visuals.modules.Module;
+import fun.popka.visuals.modules.impl.render.ClickGui;
 import fun.popka.visuals.ui.clickgui.ClickGuiConfigPanel;
 import fun.popka.visuals.ui.clickgui.ClickGuiInputHandler;
 import fun.popka.visuals.ui.clickgui.ClickGuiRenderer;
@@ -18,6 +19,7 @@ import fun.popka.visuals.ui.clickgui.ClickGuiSettingRenderer;
 import fun.popka.visuals.ui.clickgui.ClickGuiState;
 import fun.popka.visuals.ui.clickgui.ClickGuiStyle;
 import fun.popka.visuals.ui.clickgui.ClickGuiThemePanel;
+import fun.popka.visuals.ui.clickgui.ImGuiScreen;
 
 public class MenuPanel extends Screen implements QClient {
     private static final ClickGuiState SHARED_STATE = new ClickGuiState();
@@ -27,6 +29,7 @@ public class MenuPanel extends Screen implements QClient {
     private final ClickGuiInputHandler inputHandler = new ClickGuiInputHandler(state);
     private final ClickGuiConfigPanel configPanel = new ClickGuiConfigPanel(state);
     private final ClickGuiThemePanel themePanel = new ClickGuiThemePanel(state);
+    private final ImGuiScreen imGuiScreen = new ImGuiScreen();
     private final AnimationUtils openAnimation = new AnimationUtils(0f, 7.5f, Easings.CUBIC_OUT);
     private boolean closing;
     private boolean closeSoundPlayed;
@@ -51,29 +54,40 @@ public class MenuPanel extends Screen implements QClient {
     public void renderBackground(DrawContext context, int mouseX, int mouseY, float delta) {
     }
 
+    private void syncStyle() {
+        ClickGuiStyle desired = ClickGui.INSTANCE.getClickGuiStyle();
+        if (state.getStyle() != desired) {
+            state.setStyle(desired);
+            Window window = getWindow();
+            if (window != null) state.updatePosition(window, categoryCount);
+        }
+    }
+
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
         Window window = getWindow();
-        if (window == null) {
-            return;
-        }
+        if (window == null) return;
 
+        syncStyle();
         updateAnimation();
         float progress = getAnimationProgress();
         if (closing && progress <= 0.001f) {
-            if (mc != null) {
-                mc.setScreen(null);
-            }
+            if (mc != null) mc.setScreen(null);
             return;
         }
 
         state.updatePosition(window, categoryCount);
         state.setRenderOffsetY(getPanelOffsetY(progress));
-        configPanel.update(closing);
-        configPanel.render(context, mouseX, mouseY, window, progress);
-        themePanel.update(closing);
-        themePanel.render(context, mouseX, mouseY, window, progress);
-        renderer.render(context, mouseX, mouseY, window, progress);
+
+        if (state.getStyle() == ClickGuiStyle.IMGUI) {
+            imGuiScreen.render(context, mouseX, mouseY, window, progress, closing);
+        } else {
+            configPanel.update(closing);
+            configPanel.render(context, mouseX, mouseY, window, progress);
+            themePanel.update(closing);
+            themePanel.render(context, mouseX, mouseY, window, progress);
+            renderer.render(context, mouseX, mouseY, window, progress);
+        }
 
         super.render(context, mouseX, mouseY, delta);
     }
@@ -83,12 +97,10 @@ public class MenuPanel extends Screen implements QClient {
         if (closing) return true;
         syncLayout();
         state.setRenderOffsetY(getPanelOffsetY(getAnimationProgress()));
-        if (configPanel.mouseClicked(mouseX, mouseY, button, getWindow())) {
-            return true;
-        }
-        if (themePanel.mouseClicked(mouseX, mouseY, button, getWindow())) {
-            return true;
-        }
+        if (state.getStyle() == ClickGuiStyle.IMGUI)
+            return imGuiScreen.mouseClicked(mouseX, mouseY, button) || super.mouseClicked(mouseX, mouseY, button);
+        if (configPanel.mouseClicked(mouseX, mouseY, button, getWindow())) return true;
+        if (themePanel.mouseClicked(mouseX, mouseY, button, getWindow())) return true;
         return inputHandler.mouseClicked(mouseX, mouseY, button, getWindow())
                 || super.mouseClicked(mouseX, mouseY, button);
     }
@@ -97,6 +109,8 @@ public class MenuPanel extends Screen implements QClient {
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
         if (closing) return true;
         syncLayout();
+        if (state.getStyle() == ClickGuiStyle.IMGUI)
+            return imGuiScreen.mouseReleased(mouseX, mouseY, button) || super.mouseReleased(mouseX, mouseY, button);
         return inputHandler.mouseReleased(button) || super.mouseReleased(mouseX, mouseY, button);
     }
 
@@ -105,6 +119,8 @@ public class MenuPanel extends Screen implements QClient {
         if (closing) return true;
         syncLayout();
         state.setRenderOffsetY(getPanelOffsetY(getAnimationProgress()));
+        if (state.getStyle() == ClickGuiStyle.IMGUI)
+            return imGuiScreen.mouseDragged(mouseX, mouseY, button) || super.mouseDragged(mouseX, mouseY, button, deltaX, deltaY);
         return inputHandler.mouseDragged(mouseX, mouseY, button)
                 || super.mouseDragged(mouseX, mouseY, button, deltaX, deltaY);
     }
@@ -114,12 +130,10 @@ public class MenuPanel extends Screen implements QClient {
         if (closing) return true;
         syncLayout();
         state.setRenderOffsetY(getPanelOffsetY(getAnimationProgress()));
-        if (configPanel.mouseScrolled(mouseX, mouseY, verticalAmount)) {
-            return true;
-        }
-        if (themePanel.mouseScrolled(mouseX, mouseY, verticalAmount)) {
-            return true;
-        }
+        if (state.getStyle() == ClickGuiStyle.IMGUI)
+            return imGuiScreen.mouseScrolled(mouseX, mouseY, verticalAmount) || super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
+        if (configPanel.mouseScrolled(mouseX, mouseY, verticalAmount)) return true;
+        if (themePanel.mouseScrolled(mouseX, mouseY, verticalAmount)) return true;
         return inputHandler.mouseScrolled(mouseX, mouseY, verticalAmount)
                 || super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
     }
@@ -127,47 +141,23 @@ public class MenuPanel extends Screen implements QClient {
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (closing) return true;
-        if (configPanel.isTextInputActive() && configPanel.keyPressed(keyCode, modifiers)) {
-            return true;
+        if (state.getStyle() == ClickGuiStyle.IMGUI) {
+            if (imGuiScreen.keyPressed(keyCode, modifiers)) return true;
+            if (keyCode == GLFW.GLFW_KEY_ESCAPE) { startClosing(); return true; }
+            return super.keyPressed(keyCode, scanCode, modifiers);
         }
-        if (inputHandler.keyPressed(keyCode, modifiers)) {
-            return true;
-        }
-        if (canToggleStyle() && keyCode == GLFW.GLFW_KEY_R) {
-            toggleStyle();
-            return true;
-        }
-        if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
-            startClosing();
-            return true;
-        }
+        if (configPanel.isTextInputActive() && configPanel.keyPressed(keyCode, modifiers)) return true;
+        if (inputHandler.keyPressed(keyCode, modifiers)) return true;
+        if (keyCode == GLFW.GLFW_KEY_ESCAPE) { startClosing(); return true; }
         return super.keyPressed(keyCode, scanCode, modifiers);
-    }
-
-    private boolean canToggleStyle() {
-        return !configPanel.isTextInputActive()
-                && !state.isSearchActive()
-                && state.getBindingModule() == null
-                && state.getBindingSetting() == null;
-    }
-
-    private void toggleStyle() {
-        ClickGuiStyle next = state.getStyle() == ClickGuiStyle.DROPDOWN
-                ? ClickGuiStyle.NEW
-                : ClickGuiStyle.DROPDOWN;
-        state.setStyle(next);
-        Window window = getWindow();
-        if (window != null) {
-            state.updatePosition(window, categoryCount);
-        }
     }
 
     @Override
     public boolean charTyped(char chr, int modifiers) {
         if (closing) return true;
-        if (configPanel.isTextInputActive() && configPanel.charTyped(chr)) {
-            return true;
-        }
+        if (state.getStyle() == ClickGuiStyle.IMGUI)
+            return imGuiScreen.charTyped(chr) || super.charTyped(chr, modifiers);
+        if (configPanel.isTextInputActive() && configPanel.charTyped(chr)) return true;
         return inputHandler.charTyped(chr) || super.charTyped(chr, modifiers);
     }
 

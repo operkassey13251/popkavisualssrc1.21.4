@@ -14,6 +14,7 @@ public class ModuleClass extends GlobalObject<Module> implements ModuleRewords {
 
     public void initialize() {
         this.add(
+                clickGui,
                 arrows,
                 autoAccept,
                 autoForest,
