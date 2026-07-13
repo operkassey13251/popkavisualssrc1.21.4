@@ -64,6 +64,7 @@ public interface ModuleRewords {
     NoControllerWeb noControllerWeb = NoControllerWeb.INSTANCE;
     PacketCriticals packetCriticals = PacketCriticals.INSTANCE;
     Particle particle = Particle.INSTANCE;
+    Particles particles = Particles.INSTANCE;
     Projectile projectile = Projectile.INSTANCE;
     FireworkESP fireworkESP = FireworkESP.INSTANCE;
     FastBreak fastBreak = FastBreak.INSTANCE;

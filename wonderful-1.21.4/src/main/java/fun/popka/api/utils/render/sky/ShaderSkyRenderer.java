@@ -85,7 +85,9 @@ public class ShaderSkyRenderer implements QClient {
             RenderSystem.setShaderTexture(0, depthTex);
             drawFullscreenQuad();
 
-            ShaderProgram overlayShader = mc.getShaderLoader().getOrCreateProgram(ShaderUtils.blockOverlay);
+            boolean isCosmic = module.mode.is("Космос");
+            var overlayKey = isCosmic ? ShaderUtils.skyCosmic : ShaderUtils.blockOverlay;
+            ShaderProgram overlayShader = mc.getShaderLoader().getOrCreateProgram(overlayKey);
             if (overlayShader != null) {
                 int color1 = getThemeColor1();
                 int color2 = getThemeColor2();
@@ -96,22 +98,49 @@ public class ShaderSkyRenderer implements QClient {
                 RenderSystem.disableDepthTest();
                 RenderSystem.depthMask(false);
 
-                RenderSystem.setShader(ShaderUtils.blockOverlay);
+                RenderSystem.setShader(overlayKey);
                 RenderSystem.setShaderTexture(0, maskBuffer.getColorAttachment());
 
-                setUniform(overlayShader, "texelSize",
-                        1.0f / Math.max(1, mc.getWindow().getFramebufferWidth()),
-                        1.0f / Math.max(1, mc.getWindow().getFramebufferHeight()));
                 setUniform(overlayShader, "color", ColorUtils.redf(color1), ColorUtils.greenf(color1), ColorUtils.bluef(color1));
                 setUniform(overlayShader, "color2", ColorUtils.redf(color2), ColorUtils.greenf(color2), ColorUtils.bluef(color2));
                 setUniform(overlayShader, "time", (System.currentTimeMillis() % 100000L) / 1000.0f);
-                setUniform(overlayShader, "speed", module.waveSpeed.get());
-                setUniform(overlayShader, "scale", module.waveScale.get());
-                setUniform(overlayShader, "outline", module.outline.get());
-                setUniform(overlayShader, "glow", module.glow.get());
-                setUniform(overlayShader, "fill", module.fill.get());
                 setUniform(overlayShader, "alpha", module.alpha.get());
-                setUniform(overlayShader, "outlineOnly", 0.0f);
+
+                float m11 = savedProjection.m11();
+                float fovDeg = m11 > 0.001f ? (float) Math.toDegrees(2.0 * Math.atan(1.0 / m11)) : 70.0f;
+                int fbW = mc.getWindow().getFramebufferWidth();
+                int fbH = mc.getWindow().getFramebufferHeight();
+                float aspectVal = fbH > 0 ? (float) fbW / (float) fbH : 1.0f;
+                float[] basis = computeCameraBasis();
+
+                if (isCosmic) {
+                    setUniform(overlayShader, "fov", fovDeg);
+                    setUniform(overlayShader, "aspect", aspectVal);
+                    setUniform(overlayShader, "starDensity", module.starDensity.get());
+                    setUniform(overlayShader, "nebulaIntensity", module.nebulaIntensity.get());
+                    setUniform(overlayShader, "twinkleSpeed", module.twinkleSpeed.get());
+
+                    setUniform(overlayShader, "cameraRight", basis[0], basis[1], basis[2]);
+                    setUniform(overlayShader, "cameraUp", basis[3], basis[4], basis[5]);
+                    setUniform(overlayShader, "cameraForward", basis[6], basis[7], basis[8]);
+                } else {
+                    setUniform(overlayShader, "texelSize",
+                            1.0f / Math.max(1, mc.getWindow().getFramebufferWidth()),
+                            1.0f / Math.max(1, mc.getWindow().getFramebufferHeight()));
+                    setUniform(overlayShader, "speed", module.waveSpeed.get());
+                    setUniform(overlayShader, "scale", module.waveScale.get());
+                    setUniform(overlayShader, "outline", module.outline.get());
+                    setUniform(overlayShader, "glow", module.glow.get());
+                    setUniform(overlayShader, "fill", module.fill.get());
+                    setUniform(overlayShader, "outlineOnly", 0.0f);
+
+                    setUniform(overlayShader, "worldSpace", 1.0f);
+                    setUniform(overlayShader, "fov", fovDeg);
+                    setUniform(overlayShader, "aspect", aspectVal);
+                    setUniform(overlayShader, "cameraRight", basis[0], basis[1], basis[2]);
+                    setUniform(overlayShader, "cameraUp", basis[3], basis[4], basis[5]);
+                    setUniform(overlayShader, "cameraForward", basis[6], basis[7], basis[8]);
+                }
                 drawFullscreenQuad();
             }
 
@@ -168,6 +197,9 @@ public class ShaderSkyRenderer implements QClient {
 
     private boolean isEffectEnabled(ShaderSky module) {
         if (module == null || !module.isEnable()) return false;
+        if (module.mode.is("Космос")) {
+            return module.alpha.get() > EPSILON;
+        }
         boolean hasGlow = module.glow.get() > EPSILON;
         boolean hasFill = module.fill.get() > EPSILON && module.alpha.get() > EPSILON;
         return hasGlow || hasFill;
@@ -205,6 +237,37 @@ public class ShaderSkyRenderer implements QClient {
     private void setUniform(ShaderProgram shader, String name, float v) {
         GlUniform u = shader.getUniform(name);
         if (u != null) u.set(v);
+    }
+
+    private float[] computeCameraBasis() {
+        if (mc.gameRenderer == null || mc.gameRenderer.getCamera() == null) {
+            return new float[]{1f, 0f, 0f, 0f, 1f, 0f, 0f, 0f, 1f};
+        }
+        float yaw = (float) Math.toRadians(mc.gameRenderer.getCamera().getYaw());
+        float pitch = (float) Math.toRadians(mc.gameRenderer.getCamera().getPitch());
+
+        float sy = (float) Math.sin(yaw);
+        float cy = (float) Math.cos(yaw);
+        float sp = (float) Math.sin(pitch);
+        float cp = (float) Math.cos(pitch);
+
+        float fx = -sy * cp;
+        float fy = -sp;
+        float fz =  cy * cp;
+
+        float rx = -fz;
+        float ry = 0.0f;
+        float rz =  fx;
+        float rLen = (float) Math.sqrt(rx * rx + ry * ry + rz * rz);
+        if (rLen > 1e-6f) {
+            rx /= rLen; ry /= rLen; rz /= rLen;
+        }
+
+        float ux = ry * fz - rz * fy;
+        float uy = rz * fx - rx * fz;
+        float uz = rx * fy - ry * fx;
+
+        return new float[]{rx, ry, rz, ux, uy, uz, fx, fy, fz};
     }
 
     private void setUniform(ShaderProgram shader, String name, float x, float y) {

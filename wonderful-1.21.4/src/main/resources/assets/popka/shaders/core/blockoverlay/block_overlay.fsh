@@ -13,6 +13,12 @@ uniform float glow;
 uniform float fill;
 uniform float alpha;
 uniform float outlineOnly;
+uniform float worldSpace;
+uniform float fov;
+uniform float aspect;
+uniform vec3 cameraRight;
+uniform vec3 cameraUp;
+uniform vec3 cameraForward;
 
 in vec2 TexCoord;
 out vec4 OutColor;
@@ -59,6 +65,49 @@ float ridged(vec2 p) {
     return value;
 }
 
+float hash13(vec3 p) {
+    p = fract(p * 0.1031);
+    p += dot(p, p.yzx + 33.33);
+    return fract((p.x + p.y) * p.z);
+}
+
+float noise3(vec3 p) {
+    vec3 i = floor(p);
+    vec3 f = fract(p);
+    f = f * f * (3.0 - 2.0 * f);
+
+    return mix(
+        mix(mix(hash13(i), hash13(i + vec3(1.0, 0.0, 0.0)), f.x),
+            mix(hash13(i + vec3(0.0, 1.0, 0.0)), hash13(i + vec3(1.0, 1.0, 0.0)), f.x), f.y),
+        mix(mix(hash13(i + vec3(0.0, 0.0, 1.0)), hash13(i + vec3(1.0, 0.0, 1.0)), f.x),
+            mix(hash13(i + vec3(0.0, 1.0, 1.0)), hash13(i + vec3(1.0, 1.0, 1.0)), f.x), f.y),
+        f.z
+    );
+}
+
+float fbm3(vec3 p) {
+    float value = 0.0;
+    float amplitude = 0.5;
+    for (int i = 0; i < 5; i++) {
+        value += noise3(p) * amplitude;
+        p = p * 2.02 + vec3(8.4, 5.7, 3.1);
+        amplitude *= 0.5;
+    }
+    return value;
+}
+
+float ridged3(vec3 p) {
+    float value = 0.0;
+    float amplitude = 0.55;
+    for (int i = 0; i < 4; i++) {
+        float r = 1.0 - abs(noise3(p) * 2.0 - 1.0);
+        value += r * amplitude;
+        p = p * 2.18 + vec3(3.1, 9.2, 6.5);
+        amplitude *= 0.52;
+    }
+    return value;
+}
+
 float getEdge(vec2 uv, float s) {
     float a0 = texture(Sampler0, uv).a;
     float ax1 = texture(Sampler0, uv + vec2(texelSize.x * s, 0.0)).a;
@@ -91,23 +140,60 @@ void main() {
     }
 
     float t = time * max(speed, 0.001);
-    vec2 flow = uv * mix(1.2, 3.2, clamp(scale / 3.0, 0.0, 1.0));
-    vec2 drift = vec2(t * 0.20, -t * 0.15);
 
-    vec2 warp = vec2(
-        fbm(flow * 0.90 + drift * 0.75 + vec2(0.0, 4.1)),
-        fbm(flow * 0.78 - drift * 0.48 + vec2(3.7, 1.8))
-    );
-    vec2 q = flow + (warp - 0.5) * 1.8;
+    float mist;
+    float veins;
+    float stripeA;
+    float stripeB;
 
-    float mist = fbm(q * 0.72 - drift * 0.24 + vec2(4.2, 8.1));
-    float veins = ridged(q * 1.85 + vec2(mist * 2.5, mist * 1.6) - drift * 0.55);
-    veins = pow(clamp(veins, 0.0, 1.0), 2.4);
+    if (worldSpace > 0.5) {
+        vec2 ndc = TexCoord * 2.0 - 1.0;
+        float tanHalfFov = tan(radians(fov) * 0.5);
+        vec3 viewDir = vec3(ndc.x * aspect * tanHalfFov, ndc.y * tanHalfFov, -1.0);
+        vec3 worldDir = normalize(
+            cameraRight  * viewDir.x +
+            cameraUp     * viewDir.y +
+            cameraForward * (-viewDir.z)
+        );
 
-    float stripeA = 1.0 - abs(sin((q.x * 1.08 + q.y * 0.42) * 1.7 + time * 0.85 + mist * 4.3));
-    float stripeB = 1.0 - abs(sin((q.x * -0.58 + q.y * 1.12) * 1.45 - time * 0.65 - mist * 2.9));
-    stripeA = pow(clamp(stripeA, 0.0, 1.0), 4.8);
-    stripeB = pow(clamp(stripeB, 0.0, 1.0), 5.4);
+        float scl = mix(1.2, 3.2, clamp(scale / 3.0, 0.0, 1.0));
+        vec3 p = worldDir * scl;
+        vec3 drift3 = vec3(t * 0.20, -t * 0.15, t * 0.12);
+
+        vec3 warp = vec3(
+            fbm3(p * 0.90 + drift3 * 0.75 + vec3(0.0, 4.1, 2.3)),
+            fbm3(p * 0.78 - drift3 * 0.48 + vec3(3.7, 1.8, 5.1)),
+            fbm3(p * 0.83 + drift3 * 0.33 + vec3(1.2, 6.4, 8.7))
+        );
+        vec3 q = p + (warp - 0.5) * 1.8;
+
+        mist = fbm3(q * 0.72 - drift3 * 0.24 + vec3(4.2, 8.1, 1.5));
+        veins = ridged3(q * 1.85 + vec3(mist * 2.5, mist * 1.6, mist * 1.1) - drift3 * 0.55);
+        veins = pow(clamp(veins, 0.0, 1.0), 2.4);
+
+        stripeA = 1.0 - abs(sin(dot(q, vec3(1.08, 0.42, 0.71)) * 1.7 + time * 0.85 + mist * 4.3));
+        stripeB = 1.0 - abs(sin(dot(q, vec3(-0.58, 1.12, 0.34)) * 1.45 - time * 0.65 - mist * 2.9));
+        stripeA = pow(clamp(stripeA, 0.0, 1.0), 4.8);
+        stripeB = pow(clamp(stripeB, 0.0, 1.0), 5.4);
+    } else {
+        vec2 flow = uv * mix(1.2, 3.2, clamp(scale / 3.0, 0.0, 1.0));
+        vec2 drift = vec2(t * 0.20, -t * 0.15);
+
+        vec2 warp = vec2(
+            fbm(flow * 0.90 + drift * 0.75 + vec2(0.0, 4.1)),
+            fbm(flow * 0.78 - drift * 0.48 + vec2(3.7, 1.8))
+        );
+        vec2 q = flow + (warp - 0.5) * 1.8;
+
+        mist = fbm(q * 0.72 - drift * 0.24 + vec2(4.2, 8.1));
+        veins = ridged(q * 1.85 + vec2(mist * 2.5, mist * 1.6) - drift * 0.55);
+        veins = pow(clamp(veins, 0.0, 1.0), 2.4);
+
+        stripeA = 1.0 - abs(sin((q.x * 1.08 + q.y * 0.42) * 1.7 + time * 0.85 + mist * 4.3));
+        stripeB = 1.0 - abs(sin((q.x * -0.58 + q.y * 1.12) * 1.45 - time * 0.65 - mist * 2.9));
+        stripeA = pow(clamp(stripeA, 0.0, 1.0), 4.8);
+        stripeB = pow(clamp(stripeB, 0.0, 1.0), 5.4);
+    }
 
     float energy = clamp(mist * 0.22 + veins * 0.88 + stripeA * 0.55 + stripeB * 0.32, 0.0, 1.0);
     float core = smoothstep(0.18, 0.98, energy);

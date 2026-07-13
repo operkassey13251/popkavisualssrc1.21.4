@@ -47,6 +47,7 @@ public class ModuleClass extends GlobalObject<Module> implements ModuleRewords {
                 lootTracker,
                 noVignette,
                 particle,
+                particles,
                 projectile,
                 scoreboardHP,
                 removals,

@@ -9,21 +9,31 @@ public class ShaderSky extends Module {
 
     public static ShaderSky INSTANCE = new ShaderSky();
     private static final ShaderSkyRenderer RENDERER = ShaderSkyRenderer.getInstance();
-    public final ModeSetting mode = new ModeSetting("Режим", "Красивый", "Красивый");
+    public final ModeSetting mode = new ModeSetting("Режим", "Красивый", "Красивый", "Космос");
 
     public final FloatSetting waveSpeed = new FloatSetting("Скорость волн", 1.2f, 0.1f, 5.0f, 0.1f)
             .visible(() -> mode.is("Красивый"));
     public final FloatSetting waveScale = new FloatSetting("Частота волн", 1.0f, 1.0f, 3.0f, 0.1f)
             .visible(() -> mode.is("Красивый"));
 
-    public final FloatSetting outline = new FloatSetting("Ширина обводки", 1.2f, 0.1f, 5.0f, 0.1f);
-    public final FloatSetting glow = new FloatSetting("Сила свечения", 1.0f, 0.0f, 5.0f, 0.1f);
-    public final FloatSetting fill = new FloatSetting("Заливка", 0.6f, 0.0f, 1.0f, 0.01f);
+    public final FloatSetting outline = new FloatSetting("Ширина обводки", 1.2f, 0.1f, 5.0f, 0.1f)
+            .visible(() -> mode.is("Красивый"));
+    public final FloatSetting glow = new FloatSetting("Сила свечения", 1.0f, 0.0f, 5.0f, 0.1f)
+            .visible(() -> mode.is("Красивый"));
+    public final FloatSetting fill = new FloatSetting("Заливка", 0.6f, 0.0f, 1.0f, 0.01f)
+            .visible(() -> mode.is("Красивый"));
     public final FloatSetting alpha = new FloatSetting("Прозрачность", 1.0f, 0.0f, 1.0f, 0.05f);
+
+    public final FloatSetting starDensity = new FloatSetting("Звёзды", 5.0f, 1.0f, 15.0f, 1.0f)
+            .visible(() -> mode.is("Космос"));
+    public final FloatSetting nebulaIntensity = new FloatSetting("Туманность", 0.8f, 0.0f, 2.0f, 0.1f)
+            .visible(() -> mode.is("Космос"));
+    public final FloatSetting twinkleSpeed = new FloatSetting("Мерцание", 1.0f, 0.0f, 5.0f, 0.1f)
+            .visible(() -> mode.is("Космос"));
 
     public ShaderSky() {
         super("ShaderSky", "Красивый Шейдер на небо", ModuleCategory.RENDER);
-        addSettings(mode, waveSpeed, waveScale, outline, glow, fill, alpha);
+        addSettings(mode, waveSpeed, waveScale, outline, glow, fill, alpha, starDensity, nebulaIntensity, twinkleSpeed);
     }
 
     @Override
