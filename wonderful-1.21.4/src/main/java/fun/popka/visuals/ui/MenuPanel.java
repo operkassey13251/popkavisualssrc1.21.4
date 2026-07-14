@@ -20,6 +20,7 @@ import fun.popka.visuals.ui.clickgui.ClickGuiState;
 import fun.popka.visuals.ui.clickgui.ClickGuiStyle;
 import fun.popka.visuals.ui.clickgui.ClickGuiThemePanel;
 import fun.popka.visuals.ui.clickgui.ImGuiScreen;
+import fun.popka.visuals.ui.clickgui.PivoScreen;
 
 public class MenuPanel extends Screen implements QClient {
     private static final ClickGuiState SHARED_STATE = new ClickGuiState();
@@ -30,6 +31,7 @@ public class MenuPanel extends Screen implements QClient {
     private final ClickGuiConfigPanel configPanel = new ClickGuiConfigPanel(state);
     private final ClickGuiThemePanel themePanel = new ClickGuiThemePanel(state);
     private final ImGuiScreen imGuiScreen = new ImGuiScreen();
+    private final PivoScreen pivoScreen = new PivoScreen();
     private final AnimationUtils openAnimation = new AnimationUtils(0f, 7.5f, Easings.CUBIC_OUT);
     private boolean closing;
     private boolean closeSoundPlayed;
@@ -81,6 +83,8 @@ public class MenuPanel extends Screen implements QClient {
 
         if (state.getStyle() == ClickGuiStyle.IMGUI) {
             imGuiScreen.render(context, mouseX, mouseY, window, progress, closing);
+        } else if (state.getStyle() == ClickGuiStyle.PIVO) {
+            pivoScreen.render(context, mouseX, mouseY, window, progress, closing);
         } else {
             configPanel.update(closing);
             configPanel.render(context, mouseX, mouseY, window, progress);
@@ -99,6 +103,8 @@ public class MenuPanel extends Screen implements QClient {
         state.setRenderOffsetY(getPanelOffsetY(getAnimationProgress()));
         if (state.getStyle() == ClickGuiStyle.IMGUI)
             return imGuiScreen.mouseClicked(mouseX, mouseY, button) || super.mouseClicked(mouseX, mouseY, button);
+        if (state.getStyle() == ClickGuiStyle.PIVO)
+            return pivoScreen.mouseClicked(mouseX, mouseY, button) || super.mouseClicked(mouseX, mouseY, button);
         if (configPanel.mouseClicked(mouseX, mouseY, button, getWindow())) return true;
         if (themePanel.mouseClicked(mouseX, mouseY, button, getWindow())) return true;
         return inputHandler.mouseClicked(mouseX, mouseY, button, getWindow())
@@ -111,6 +117,8 @@ public class MenuPanel extends Screen implements QClient {
         syncLayout();
         if (state.getStyle() == ClickGuiStyle.IMGUI)
             return imGuiScreen.mouseReleased(mouseX, mouseY, button) || super.mouseReleased(mouseX, mouseY, button);
+        if (state.getStyle() == ClickGuiStyle.PIVO)
+            return pivoScreen.mouseReleased(mouseX, mouseY, button) || super.mouseReleased(mouseX, mouseY, button);
         return inputHandler.mouseReleased(button) || super.mouseReleased(mouseX, mouseY, button);
     }
 
@@ -121,6 +129,8 @@ public class MenuPanel extends Screen implements QClient {
         state.setRenderOffsetY(getPanelOffsetY(getAnimationProgress()));
         if (state.getStyle() == ClickGuiStyle.IMGUI)
             return imGuiScreen.mouseDragged(mouseX, mouseY, button) || super.mouseDragged(mouseX, mouseY, button, deltaX, deltaY);
+        if (state.getStyle() == ClickGuiStyle.PIVO)
+            return pivoScreen.mouseDragged(mouseX, mouseY, button) || super.mouseDragged(mouseX, mouseY, button, deltaX, deltaY);
         return inputHandler.mouseDragged(mouseX, mouseY, button)
                 || super.mouseDragged(mouseX, mouseY, button, deltaX, deltaY);
     }
@@ -132,6 +142,8 @@ public class MenuPanel extends Screen implements QClient {
         state.setRenderOffsetY(getPanelOffsetY(getAnimationProgress()));
         if (state.getStyle() == ClickGuiStyle.IMGUI)
             return imGuiScreen.mouseScrolled(mouseX, mouseY, verticalAmount) || super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
+        if (state.getStyle() == ClickGuiStyle.PIVO)
+            return pivoScreen.mouseScrolled(mouseX, mouseY, verticalAmount) || super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
         if (configPanel.mouseScrolled(mouseX, mouseY, verticalAmount)) return true;
         if (themePanel.mouseScrolled(mouseX, mouseY, verticalAmount)) return true;
         return inputHandler.mouseScrolled(mouseX, mouseY, verticalAmount)
@@ -146,6 +158,11 @@ public class MenuPanel extends Screen implements QClient {
             if (keyCode == GLFW.GLFW_KEY_ESCAPE) { startClosing(); return true; }
             return super.keyPressed(keyCode, scanCode, modifiers);
         }
+        if (state.getStyle() == ClickGuiStyle.PIVO) {
+            if (pivoScreen.keyPressed(keyCode, modifiers)) return true;
+            if (keyCode == GLFW.GLFW_KEY_ESCAPE) { startClosing(); return true; }
+            return super.keyPressed(keyCode, scanCode, modifiers);
+        }
         if (configPanel.isTextInputActive() && configPanel.keyPressed(keyCode, modifiers)) return true;
         if (inputHandler.keyPressed(keyCode, modifiers)) return true;
         if (keyCode == GLFW.GLFW_KEY_ESCAPE) { startClosing(); return true; }
@@ -157,6 +174,8 @@ public class MenuPanel extends Screen implements QClient {
         if (closing) return true;
         if (state.getStyle() == ClickGuiStyle.IMGUI)
             return imGuiScreen.charTyped(chr) || super.charTyped(chr, modifiers);
+        if (state.getStyle() == ClickGuiStyle.PIVO)
+            return pivoScreen.charTyped(chr) || super.charTyped(chr, modifiers);
         if (configPanel.isTextInputActive() && configPanel.charTyped(chr)) return true;
         return inputHandler.charTyped(chr) || super.charTyped(chr, modifiers);
     }

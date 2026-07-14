@@ -8,7 +8,7 @@ public class ClickGui extends Module {
 
     public static ClickGui INSTANCE = new ClickGui();
 
-    public final ModeSetting mode = new ModeSetting("Style", "Default", "Default", "ImGui");
+    public final ModeSetting mode = new ModeSetting("Style", "Default", "Default", "ImGui", "Pivo");
 
     public ClickGui() {
         super("ClickGui", "Настройки ClickGui", ModuleCategory.RENDER);
@@ -16,6 +16,8 @@ public class ClickGui extends Module {
     }
 
     public ClickGuiStyle getClickGuiStyle() {
-        return mode.is("ImGui") ? ClickGuiStyle.IMGUI : ClickGuiStyle.DROPDOWN;
+        if (mode.is("ImGui")) return ClickGuiStyle.IMGUI;
+        if (mode.is("Pivo")) return ClickGuiStyle.PIVO;
+        return ClickGuiStyle.DROPDOWN;
     }
 }

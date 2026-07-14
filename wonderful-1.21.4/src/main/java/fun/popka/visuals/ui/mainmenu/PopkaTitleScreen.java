@@ -16,14 +16,28 @@ import java.util.List;
 
 public class PopkaTitleScreen extends Screen {
 
+    private static final String[] QUOTES = {
+            "Интересный факт, мы придумали PopkaVisuals въебав 67 литров пива",
+            "Пока не доказано, не ебёт, что сказано",
+            "Одна ошибка и ты ошибся",
+            "Студенткам художественного училища сюда @noviyprizmarin",
+            "Владелец дебуды клиента - сын фермера"
+    };
+    private static final long QUOTE_INTERVAL_MS = 5000L;
+
     private final List<ButtonSpec> buttonSpecs = new ArrayList<>();
 
     private final MCFontRenderer titleFont;
+    private final MCFontRenderer quoteFont;
+
+    private int quoteIndex = 0;
+    private long quoteStartTime = 0L;
 
     public PopkaTitleScreen() {
         super(Text.literal("PopkaVisuals"));
         Fonts.init();
         titleFont = Fonts.getSystemFont("Segoe UI", 42, Font.BOLD);
+        quoteFont = Fonts.getSystemFont("Segoe UI", 16, Font.PLAIN);
     }
 
     @Override
@@ -84,6 +98,25 @@ public class PopkaTitleScreen extends Screen {
         float titleX = (this.width - titleWidth) / 2f;
         float titleY = (this.height / 2f) - 90f;
         titleFont.drawStringWithShadow(title, titleX, titleY, 0xFFFFFFFF);
+
+        renderQuote();
+    }
+
+    private void renderQuote() {
+        long now = System.currentTimeMillis();
+        if (quoteStartTime == 0L) quoteStartTime = now;
+
+        long elapsed = now - quoteStartTime;
+        if (elapsed >= QUOTE_INTERVAL_MS) {
+            quoteIndex = (quoteIndex + 1) % QUOTES.length;
+            quoteStartTime = now;
+        }
+
+        String quote = QUOTES[quoteIndex];
+        float quoteWidth = quoteFont.getStringWidth(quote);
+        float quoteX = (this.width - quoteWidth) / 2f;
+        float quoteY = this.height - 28f;
+        quoteFont.drawStringWithShadow(quote, quoteX, quoteY, 0xFFCCCCCC);
     }
 
     private record ButtonSpec(int x, int y, int width, int height, Text text, net.minecraft.client.gui.widget.ButtonWidget.PressAction onPress) {

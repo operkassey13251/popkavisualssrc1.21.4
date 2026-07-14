@@ -80,6 +80,74 @@ public enum ClickGuiStyle {
         @Override public float calculateSettingsHeight(Module module) { return ClickGuiLayout.calculateSettingsHeight(module); }
         @Override public float getModuleHeight(Module module, float openProgress) { return ClickGuiLayout.getModuleHeight(module, openProgress); }
     },
+    PIVO {
+        @Override public float getWidth() { return ClickGuiLayout.WIDTH; }
+        @Override public float getHeight() { return ClickGuiLayout.HEIGHT; }
+        @Override public float getCategoryPanelStep() { return ClickGuiLayout.CATEGORY_PANEL_STEP; }
+        @Override public float getPanelRadius() { return ClickGuiLayout.PANEL_RADIUS; }
+        @Override public float getThemePanelY() { return ClickGuiLayout.THEME_PANEL_Y; }
+        @Override public float getModulePadding() { return ClickGuiLayout.MODULE_PADDING; }
+        @Override public float getModuleGap() { return ClickGuiLayout.MODULE_GAP; }
+        @Override public float getModuleHeaderHeight() { return ClickGuiLayout.MODULE_HEADER_HEIGHT; }
+        @Override public float getModuleInnerWidth() { return ClickGuiLayout.MODULE_INNER_WIDTH; }
+        @Override public float getSettingStartY() { return ClickGuiLayout.SETTING_START_Y; }
+        @Override public float getSettingPadding() { return ClickGuiLayout.SETTING_PADDING; }
+        @Override public float getSettingBottomPadding() { return ClickGuiLayout.SETTING_BOTTOM_PADDING; }
+        @Override public float getSettingLeft() { return ClickGuiLayout.SETTING_LEFT; }
+        @Override public float getSettingRight() { return ClickGuiLayout.SETTING_RIGHT; }
+        @Override public float getSliderWidth() { return ClickGuiLayout.SLIDER_WIDTH; }
+        @Override public float getTextSettingWidth() { return ClickGuiLayout.TEXT_SETTING_WIDTH; }
+        @Override public float getClickableWidth() { return ClickGuiLayout.CLICKABLE_WIDTH; }
+        @Override public int getSearchMaxChars() { return ClickGuiLayout.SEARCH_MAX_CHARS; }
+        @Override public float getSearchWidth() { return ClickGuiLayout.SEARCH_WIDTH; }
+        @Override public float getSearchHeight() { return ClickGuiLayout.SEARCH_HEIGHT; }
+        @Override public float getSearchGap() { return ClickGuiLayout.SEARCH_GAP; }
+        @Override public float getSearchIconX() { return ClickGuiLayout.SEARCH_ICON_X; }
+        @Override public float getSearchTextX() { return ClickGuiLayout.SEARCH_TEXT_X; }
+        @Override public float getSearchRightPadding() { return ClickGuiLayout.SEARCH_RIGHT_PADDING; }
+        @Override public float getHeaderCenterIcon() { return ClickGuiLayout.HEADER_CENTER_ICON; }
+        @Override public float getHeaderCenterText() { return ClickGuiLayout.HEADER_CENTER_TEXT; }
+        @Override public float getSettingTextMaxRight() { return ClickGuiLayout.SETTING_TEXT_MAX_RIGHT; }
+        @Override public float getBooleanToggleX() { return ClickGuiLayout.BOOLEAN_TOGGLE_X; }
+        @Override public float getBooleanToggleW() { return ClickGuiLayout.BOOLEAN_TOGGLE_W; }
+        @Override public float getBooleanCircleStart() { return ClickGuiLayout.BOOLEAN_CIRCLE_START; }
+        @Override public float getBooleanCircleTravel() { return ClickGuiLayout.BOOLEAN_CIRCLE_TRAVEL; }
+        @Override public float getModeCircleX() { return ClickGuiLayout.MODE_CIRCLE_X; }
+        @Override public float getListCircleX() { return ClickGuiLayout.LIST_CIRCLE_X; }
+        @Override public float getTextBoxX() { return ClickGuiLayout.TEXT_BOX_X; }
+        @Override public float getDotsX() { return ClickGuiLayout.DOTS_X; }
+        @Override public int getTextPrimary() { return ClickGuiLayout.TEXT_PRIMARY; }
+        @Override public int getTextSecondary() { return ClickGuiLayout.TEXT_SECONDARY; }
+        @Override public int getTextEnabled() { return ClickGuiLayout.TEXT_ENABLED; }
+        @Override public int getTextDisabled() { return ClickGuiLayout.TEXT_DISABLED; }
+        @Override public int getTextWhite() { return ClickGuiLayout.TEXT_WHITE; }
+        @Override public int getSecondaryAccent(int colorTheme) { return ClickGuiLayout.getSecondaryAccent(colorTheme); }
+        @Override public int getPanelBg(int colorTheme) { return ClickGuiLayout.getPanelBg(colorTheme); }
+        @Override public int getPanelHeaderBg(int colorTheme) { return ClickGuiLayout.getPanelHeaderBg(colorTheme); }
+        @Override public int getSeparator(int colorTheme) { return ClickGuiLayout.getSeparator(colorTheme); }
+        @Override public int getModuleEnabledBgTop(int colorTheme) { return ClickGuiLayout.getModuleEnabledBgTop(colorTheme); }
+        @Override public int getModuleEnabledBgBottom(int colorTheme) { return ClickGuiLayout.getModuleEnabledBgBottom(colorTheme); }
+        @Override public int getModuleDisabledBgTop(int colorTheme) { return ClickGuiLayout.getModuleDisabledBgTop(colorTheme); }
+        @Override public int getModuleDisabledBgBottom(int colorTheme) { return ClickGuiLayout.getModuleDisabledBgBottom(colorTheme); }
+        @Override public int getSliderTrack(int colorTheme) { return ClickGuiLayout.getSliderTrack(colorTheme); }
+        @Override public int getToggleOff(int colorTheme) { return ClickGuiLayout.getToggleOff(colorTheme); }
+        @Override public int getSearchBg(int colorTheme) { return ClickGuiLayout.getSearchBg(colorTheme); }
+        @Override public int getSearchBorder(int colorTheme) { return ClickGuiLayout.getSearchBorder(colorTheme); }
+        @Override public int getThemePanelBg(int colorTheme) { return ClickGuiLayout.getThemePanelBg(colorTheme); }
+        @Override public int getBorderLight(int colorTheme) { return ClickGuiLayout.getBorderLight(colorTheme); }
+        @Override public float getTotalCategoriesWidth(int categoryCount) { return ClickGuiLayout.getTotalCategoriesWidth(categoryCount); }
+        @Override public float getCategoryPanelX(float x, int index) { return ClickGuiLayout.getCategoryPanelX(x, index); }
+        @Override public float getContentY(float y) { return ClickGuiLayout.getContentY(y); }
+        @Override public float getContentHeight() { return ClickGuiLayout.getContentHeight(); }
+        @Override public float getSearchX(float x, int categoryCount) { return ClickGuiLayout.getSearchX(x, categoryCount); }
+        @Override public float getSearchX(float x, int categoryCount, float searchWidth) { return ClickGuiLayout.getSearchX(x, categoryCount, searchWidth); }
+        @Override public float getSearchY(float y) { return ClickGuiLayout.getSearchY(y); }
+        @Override public boolean hasVisibleSettings(List<Setting> settings) { return ClickGuiLayout.hasVisibleSettings(settings); }
+        @Override public float calculateModeSettingHeight(ModeSetting modeSetting) { return ClickGuiLayout.calculateModeSettingHeight(modeSetting); }
+        @Override public float calculateListSettingHeight(ListSetting listSetting) { return ClickGuiLayout.calculateListSettingHeight(listSetting); }
+        @Override public float calculateSettingsHeight(Module module) { return ClickGuiLayout.calculateSettingsHeight(module); }
+        @Override public float getModuleHeight(Module module, float openProgress) { return ClickGuiLayout.getModuleHeight(module, openProgress); }
+    },
     IMGUI {
         @Override public float getWidth() { return ClickGuiLayout.WIDTH; }
         @Override public float getHeight() { return ClickGuiLayout.HEIGHT; }

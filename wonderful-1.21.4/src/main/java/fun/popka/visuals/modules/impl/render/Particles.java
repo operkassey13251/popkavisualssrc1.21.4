@@ -39,6 +39,7 @@ public class Particles extends Module {
     private final FloatSetting radius = new FloatSetting("Радиус", 14.0f, 4.0f, 30.0f, 1.0f);
     private final BooleanSetting onHit = new BooleanSetting("При ударе", false);
     private final FloatSetting hitCount = new FloatSetting("Кол-во при ударе", 20.0f, 1.0f, 100.0f, 1.0f).visible(onHit::isState);
+    private final BooleanSetting beerMug = new BooleanSetting("Кружка пива", false).visible(onHit::isState);
 
     private final List<GlowParticle> particles = new ArrayList<>();
     private final List<GlowParticle> hitParticles = new ArrayList<>();
@@ -46,7 +47,7 @@ public class Particles extends Module {
 
     public Particles() {
         super("GlowParticles", "Маленькие светящиеся частицы по миру", ModuleCategory.RENDER);
-        addSettings(count, glow, size, speed, radius, onHit, hitCount);
+        addSettings(count, glow, size, speed, radius, onHit, hitCount, beerMug);
     }
 
     @Override
@@ -87,8 +88,13 @@ public class Particles extends Module {
         double cy = target.getY() + target.getHeight() * 0.5;
         double cz = target.getZ();
 
-        int n = (int) hitCount.get();
-        for (int i = 0; i < n; i++) hitParticles.add(spawnAt(cx, cy, cz));
+        if (beerMug.isState()) {
+            int n = Math.max(1, (int) hitCount.get() / 4);
+            for (int i = 0; i < n; i++) hitParticles.add(spawnBeerMug(cx, cy, cz));
+        } else {
+            int n = (int) hitCount.get();
+            for (int i = 0; i < n; i++) hitParticles.add(spawnAt(cx, cy, cz));
+        }
     }
 
     private void updateParticles() {
@@ -152,6 +158,8 @@ public class Particles extends Module {
             p.life--;
             p.phase += 0.08f * spd;
 
+            if (p.beer) p.rotation += p.rotSpeed * spd;
+
             if (p.life <= 0) hitParticles.remove(i);
         }
     }
@@ -188,6 +196,24 @@ public class Particles extends Module {
         return new GlowParticle(cx, cy, cz, vx, vy, vz, life, random.nextFloat() * (float) Math.PI * 2f, buoyancy);
     }
 
+    private GlowParticle spawnBeerMug(double cx, double cy, double cz) {
+        float yaw = random.nextFloat() * 360f;
+        float pitch = (random.nextFloat() - 0.5f) * 50f;
+        float vel = 0.03f + random.nextFloat() * 0.05f;
+        float vx = -MathHelper.sin((float) Math.toRadians(yaw)) * MathHelper.cos((float) Math.toRadians(pitch)) * vel;
+        float vz = MathHelper.cos((float) Math.toRadians(yaw)) * MathHelper.cos((float) Math.toRadians(pitch)) * vel;
+        float vy = MathHelper.sin((float) Math.toRadians(pitch)) * vel + 0.02f;
+
+        int life = 60 + random.nextInt(50);
+        float buoyancy = -1.6f;
+
+        GlowParticle p = new GlowParticle(cx, cy, cz, vx, vy, vz, life, 0f, buoyancy);
+        p.beer = true;
+        p.rotation = random.nextFloat() * 360f;
+        p.rotSpeed = (random.nextFloat() - 0.5f) * 18f;
+        return p;
+    }
+
     private void renderParticles(Event3DRender e) {
         MatrixStack ms = e.getMatrices();
         Camera camera = e.getCamera();
@@ -202,6 +228,7 @@ public class Particles extends Module {
         float cb = (baseRGB & 0xFF) / 255f;
 
         List<GlowParticle> visible = new ArrayList<>();
+        List<GlowParticle> visibleBeer = new ArrayList<>();
         for (int i = 0, sz = particles.size(); i < sz; i++) {
             GlowParticle p = particles.get(i);
             double dx = p.x - cam.x;
@@ -227,43 +254,109 @@ public class Particles extends Module {
             float a = getAlpha(p);
             if (a < 0.01f) continue;
             p.renderAlpha = a;
-            visible.add(p);
+            if (p.beer) visibleBeer.add(p);
+            else visible.add(p);
         }
 
-        if (visible.isEmpty()) return;
+        if (visible.isEmpty() && visibleBeer.isEmpty()) return;
 
+        if (!visible.isEmpty()) {
+            RenderSystem.enableBlend();
+            RenderSystem.disableCull();
+            RenderSystem.disableDepthTest();
+            RenderSystem.depthMask(false);
+            RenderSystem.blendFunc(GlStateManager.SrcFactor.SRC_ALPHA, GlStateManager.DstFactor.ONE);
+            RenderSystem.setShader(ShaderProgramKeys.POSITION_TEX_COLOR);
+            RenderSystem.setShaderTexture(0, GLOW_TEXTURE);
+
+            BufferBuilder builder = Tessellator.getInstance().begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_TEXTURE_COLOR);
+
+            for (int i = 0, sz = visible.size(); i < sz; i++) {
+                GlowParticle p = visible.get(i);
+                float pulse = 0.85f + 0.15f * MathHelper.sin(p.phase);
+                float alpha = p.renderAlpha * pulse;
+
+                ms.push();
+                ms.translate(p.x - cam.x, p.y - cam.y, p.z - cam.z);
+                ms.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(-camera.getYaw()));
+                ms.multiply(RotationAxis.POSITIVE_X.rotationDegrees(camera.getPitch()));
+
+                Matrix4f matrix = ms.peek().getPositionMatrix();
+
+                for (int g = 0; g < 3; g++) {
+                    float scale = s * GLOW_SCALES[g] * glowPower;
+                    float a = Math.min(1.0f, alpha * GLOW_ALPHA[g] * glowPower);
+                    float hs = scale * 0.5f;
+
+                    builder.vertex(matrix, -hs, hs, 0).texture(0f, 1f).color(cr, cg, cb, a);
+                    builder.vertex(matrix, hs, hs, 0).texture(1f, 1f).color(cr, cg, cb, a);
+                    builder.vertex(matrix, hs, -hs, 0).texture(1f, 0f).color(cr, cg, cb, a);
+                    builder.vertex(matrix, -hs, -hs, 0).texture(0f, 0f).color(cr, cg, cb, a);
+                }
+                ms.pop();
+            }
+
+            BufferRenderer.drawWithGlobalProgram(builder.end());
+
+            RenderSystem.depthMask(true);
+            RenderSystem.enableCull();
+            RenderSystem.defaultBlendFunc();
+            RenderSystem.disableBlend();
+        }
+
+        if (!visibleBeer.isEmpty()) {
+            renderBeerMugs(ms, camera, cam, visibleBeer, s);
+        }
+    }
+
+    private void renderBeerMugs(MatrixStack ms, Camera camera, Vec3d cam, List<GlowParticle> visibleBeer, float s) {
         RenderSystem.enableBlend();
         RenderSystem.disableCull();
         RenderSystem.disableDepthTest();
         RenderSystem.depthMask(false);
-        RenderSystem.blendFunc(GlStateManager.SrcFactor.SRC_ALPHA, GlStateManager.DstFactor.ONE);
-        RenderSystem.setShader(ShaderProgramKeys.POSITION_TEX_COLOR);
-        RenderSystem.setShaderTexture(0, GLOW_TEXTURE);
+        RenderSystem.blendFunc(GlStateManager.SrcFactor.SRC_ALPHA, GlStateManager.DstFactor.ONE_MINUS_SRC_ALPHA);
+        RenderSystem.setShader(ShaderProgramKeys.POSITION_COLOR);
 
-        BufferBuilder builder = Tessellator.getInstance().begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_TEXTURE_COLOR);
+        BufferBuilder builder = Tessellator.getInstance().begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_COLOR);
 
-        for (int i = 0, sz = visible.size(); i < sz; i++) {
-            GlowParticle p = visible.get(i);
-            float pulse = 0.85f + 0.15f * MathHelper.sin(p.phase);
-            float alpha = p.renderAlpha * pulse;
+        float mugScale = s * 5.0f;
+        float halfW = mugScale * 0.6f;
+        float halfH = mugScale * 0.8f;
+        float foamH = halfH * 0.35f;
+        float bodyTop = halfH - foamH;
+        float handleW = halfW * 0.35f;
+        float handleH = halfH * 0.55f;
+
+        for (int i = 0, sz = visibleBeer.size(); i < sz; i++) {
+            GlowParticle p = visibleBeer.get(i);
+            float alpha = p.renderAlpha;
 
             ms.push();
             ms.translate(p.x - cam.x, p.y - cam.y, p.z - cam.z);
             ms.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(-camera.getYaw()));
             ms.multiply(RotationAxis.POSITIVE_X.rotationDegrees(camera.getPitch()));
+            ms.multiply(RotationAxis.POSITIVE_Z.rotationDegrees(p.rotation));
 
-            Matrix4f matrix = ms.peek().getPositionMatrix();
+            Matrix4f m = ms.peek().getPositionMatrix();
 
-            for (int g = 0; g < 3; g++) {
-                float scale = s * GLOW_SCALES[g] * glowPower;
-                float a = Math.min(1.0f, alpha * GLOW_ALPHA[g] * glowPower);
-                float hs = scale * 0.5f;
+            float bodyA = alpha * 0.85f;
+            builder.vertex(m, -halfW, -halfH, 0).color(0.95f, 0.60f, 0.15f, bodyA);
+            builder.vertex(m, halfW, -halfH, 0).color(0.95f, 0.60f, 0.15f, bodyA);
+            builder.vertex(m, halfW, bodyTop, 0).color(0.95f, 0.60f, 0.15f, bodyA);
+            builder.vertex(m, -halfW, bodyTop, 0).color(0.95f, 0.60f, 0.15f, bodyA);
 
-                builder.vertex(matrix, -hs, hs, 0).texture(0f, 1f).color(cr, cg, cb, a);
-                builder.vertex(matrix, hs, hs, 0).texture(1f, 1f).color(cr, cg, cb, a);
-                builder.vertex(matrix, hs, -hs, 0).texture(1f, 0f).color(cr, cg, cb, a);
-                builder.vertex(matrix, -hs, -hs, 0).texture(0f, 0f).color(cr, cg, cb, a);
-            }
+            float foamA = alpha;
+            builder.vertex(m, -halfW, bodyTop, 0).color(1.0f, 0.97f, 0.85f, foamA);
+            builder.vertex(m, halfW, bodyTop, 0).color(1.0f, 0.97f, 0.85f, foamA);
+            builder.vertex(m, halfW, halfH, 0).color(1.0f, 0.97f, 0.85f, foamA);
+            builder.vertex(m, -halfW, halfH, 0).color(1.0f, 0.97f, 0.85f, foamA);
+
+            float handleA = alpha * 0.9f;
+            builder.vertex(m, halfW, -handleH, 0).color(0.75f, 0.48f, 0.12f, handleA);
+            builder.vertex(m, halfW + handleW, -handleH, 0).color(0.75f, 0.48f, 0.12f, handleA);
+            builder.vertex(m, halfW + handleW, handleH, 0).color(0.75f, 0.48f, 0.12f, handleA);
+            builder.vertex(m, halfW, handleH, 0).color(0.75f, 0.48f, 0.12f, handleA);
+
             ms.pop();
         }
 
@@ -288,6 +381,9 @@ public class Particles extends Module {
         float phase;
         float buoyancy;
         float renderAlpha;
+        boolean beer;
+        float rotation;
+        float rotSpeed;
 
         GlowParticle(double x, double y, double z, float vx, float vy, float vz, int life, float phase, float buoyancy) {
             this.x = x; this.y = y; this.z = z;
