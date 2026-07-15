@@ -31,26 +31,30 @@ import java.util.*;
 
 public class PivoScreen implements QClient {
 
-    private static final float WIN_W = 420f;
-    private static final float WIN_H = 380f;
-    private static final float WIN_RADIUS = 5f;
+    private static final float WIN_W = 330f;
+    private static final float WIN_H = 270f;
+    private static final float WIN_RADIUS = 6f;
 
-    private static final float SIDE_W = 130f;
-    private static final float ICON_H = 36f;
-    private static final float CAT_ROW_H = 18f;
+    private static final float SIDE_W = 88f;
+    private static final float ICON_H = 38f;
+    private static final float CAT_ROW_H = 20f;
     private static final float CAT_GAP = 2f;
-    private static final float MOD_ROW_H = 20f;
+    private static final float MOD_ROW_H = 22f;
     private static final float MOD_GAP = 2f;
 
-    private static final float TOGGLE_W = 24f;
-    private static final float TOGGLE_H = 12f;
+    private static final float TOGGLE_W = 26f;
+    private static final float TOGGLE_H = 13f;
     private static final float TOGGLE_KNOB = 9f;
 
-    private static final float MODE_ROW_H = 15f;
-    private static final float LIST_ROW_H = 18f;
+    private static final float MODE_ROW_H = 17f;
+    private static final float LIST_ROW_H = 20f;
 
-    private static final float THEME_ROW_H = 24f;
+    private static final float THEME_ROW_H = 28f;
     private static final float THEME_GAP = 3f;
+
+    private static final float SEARCH_H = 22f;
+    private static final float SEARCH_MARGIN = 4f;
+    private static final int SEARCH_MAX_LEN = 24;
 
     private static final String THEME_NAME = "Theme";
     private static final String THEME_ICON = "g";
@@ -69,6 +73,7 @@ public class PivoScreen implements QClient {
     private static final int C_BEER_DK  = ColorUtils.rgb(200, 130, 30);
     private static final int C_FOAM     = ColorUtils.rgb(255, 250, 230);
     private static final int C_SEL      = ColorUtils.rgba(25, 27, 36, 255);
+    private static final int C_TOGGLE_OFF = ColorUtils.rgba(15, 15, 18, 240);
     private static final int DOT_GREEN  = ColorUtils.rgb(70, 200, 110);
 
     private static final Module.ModuleCategory[] CATS = {
@@ -87,6 +92,7 @@ public class PivoScreen implements QClient {
     private final AnimationUtils[] catHovAnim = new AnimationUtils[CATS.length + 1];
     private final Map<Module, AnimationUtils> modHovAnim = new HashMap<>();
     private final Map<Module, AnimationUtils> modEnAnim = new HashMap<>();
+    private final Map<Module, AnimationUtils> modExpandAnim = new HashMap<>();
     private final Map<Setting, AnimationUtils> toggleAnim = new HashMap<>();
     private final Map<ThemeStorage.Themes, AnimationUtils> themeHovAnim = new HashMap<>();
 
@@ -96,6 +102,8 @@ public class PivoScreen implements QClient {
     private Module bindingModule = null;
     private BindSetting bindingSetting = null;
     private TextSetting editingText = null;
+    private String searchText = "";
+    private boolean searching = false;
     private List<Module> allModules = new ArrayList<>();
 
     public PivoScreen() {
@@ -117,11 +125,22 @@ public class PivoScreen implements QClient {
         return selCat == CATS.length;
     }
 
+    private boolean searchActive() {
+        return searchText != null && !searchText.isEmpty();
+    }
+
     private Module.ModuleCategory selectedCategory() {
         return CATS[selCat];
     }
 
     private List<Module> getModules() {
+        if (searchActive()) {
+            String q = searchText.toLowerCase(Locale.ROOT);
+            return allModules.stream()
+                    .filter(m -> m.getName().toLowerCase(Locale.ROOT).contains(q)
+                            || m.getDisplayName().toLowerCase(Locale.ROOT).contains(q))
+                    .toList();
+        }
         return allModules.stream().filter(m -> m.getCategory() == selectedCategory()).toList();
     }
 
@@ -130,13 +149,6 @@ public class PivoScreen implements QClient {
         float alpha = MathHelper.clamp(progress, 0f, 1f);
         winX = (window.getScaledWidth() - WIN_W) / 2f;
         winY = (window.getScaledHeight() - WIN_H) / 2f;
-
-        for (int i = 4; i >= 1; i--) {
-            float off = i * 2f;
-            float sa = alpha * 0.06f * (5 - i);
-            RenderUtils.drawRoundedRect(ctx.getMatrices(), winX - off, winY - off,
-                    WIN_W + off * 2, WIN_H + off * 2, WIN_RADIUS + off, ColorUtils.applyAlpha(0, sa));
-        }
 
         RenderUtils.drawRoundedRect(ctx.getMatrices(), winX, winY, WIN_W, WIN_H, WIN_RADIUS,
                 ColorUtils.applyAlpha(C_WIN_BG, alpha));
@@ -148,7 +160,7 @@ public class PivoScreen implements QClient {
     private void renderSidebar(DrawContext ctx, int mx, int my, float alpha) {
         float sx = winX, sy = winY;
 
-        RenderUtils.drawRoundedRect(ctx.getMatrices(), sx, sy, SIDE_W, WIN_H, WIN_RADIUS,
+        RenderUtils.drawRoundedRect(ctx.getMatrices(), sx, sy, SIDE_W, WIN_H, WIN_RADIUS, 0, 0, WIN_RADIUS,
                 ColorUtils.applyAlpha(C_SIDE_BG, alpha));
         RenderUtils.drawRoundedRect(ctx.getMatrices(), sx + SIDE_W - 1f, sy + 4, 1f, WIN_H - 8, 0,
                 ColorUtils.applyAlpha(C_SEP, alpha));
@@ -176,40 +188,72 @@ public class PivoScreen implements QClient {
             String name = (i < CATS.length) ? CATS[i].getName() : THEME_NAME;
             int clr = sel ? ColorUtils.applyAlpha(C_BLACK, alpha)
                     : ColorUtils.applyAlpha(ColorUtils.interpolateColor(C_TEXT_DIM, C_TEXT_SEC, hv), alpha);
-            iconFont(9).draw(ctx.getMatrices(), icon, sx + 8f, ry + (CAT_ROW_H - 9f) / 2f, clr);
-            font(9).draw(ctx.getMatrices(), name, sx + 20f, ry + (CAT_ROW_H - 9f) / 2f, clr);
+            iconFont(11).draw(ctx.getMatrices(), icon, sx + 8f, ry + (CAT_ROW_H - 11f) / 2f, clr);
+            font(11).draw(ctx.getMatrices(), name, sx + 22f, ry + (CAT_ROW_H - 11f) / 2f, clr);
             ry += CAT_ROW_H + CAT_GAP;
         }
+
+        renderSearch(ctx, mx, my, alpha);
+    }
+
+    private void renderSearch(DrawContext ctx, int mx, int my, float alpha) {
+        float sx = winX, sy = winY;
+        float boxX = sx + SEARCH_MARGIN;
+        float boxY = sy + WIN_H - SEARCH_H - SEARCH_MARGIN;
+        float boxW = SIDE_W - SEARCH_MARGIN * 2;
+
+        boolean hov = HoveringUtils.isHovered(mx, my, boxX, boxY, boxW, SEARCH_H);
+        int bg = searching ? C_CHILD : (hov ? C_CHILD : C_SEP);
+        RenderUtils.drawRoundedRect(ctx.getMatrices(), boxX, boxY, boxW, SEARCH_H, 3f,
+                ColorUtils.applyAlpha(bg, alpha));
+
+        if (searching) {
+            RenderUtils.drawRoundedRect(ctx.getMatrices(), boxX, boxY, 2f, SEARCH_H, 1f,
+                    ColorUtils.applyAlpha(accent(), alpha));
+        }
+
+        String display = searchActive() ? searchText : "Search";
+        boolean blink = searching && (System.currentTimeMillis() / 500 % 2 == 0);
+        if (searching && blink) display += "_";
+        int clr = searchActive() ? C_TEXT : C_TEXT_DIM;
+
+        ScissorUtils.push();
+        ScissorUtils.setFromComponentCoordinates(boxX + 5f, boxY, boxW - 10f, SEARCH_H);
+        font(17).drawCenteredString(ctx.getMatrices(), display, boxX + boxW / 2f, boxY + (SEARCH_H - 17f * 0.5f) / 2f + 1.5f,
+                ColorUtils.applyAlpha(clr, alpha));
+        ScissorUtils.pop();
     }
 
     private float contentTopY() {
-        return winY + 24f;
+        return winY + 26f;
     }
 
     private float contentHeight() {
-        return WIN_H - 24f;
+        return WIN_H - 26f;
     }
 
     private void renderContent(DrawContext ctx, int mx, int my, float alpha) {
         float cx = winX + SIDE_W, cy = winY;
         float cw = WIN_W - SIDE_W, ch = WIN_H;
 
-        RenderUtils.drawRoundedRect(ctx.getMatrices(), cx, cy, cw, ch, 0,
+        RenderUtils.drawRoundedRect(ctx.getMatrices(), cx, cy, cw, ch, 0, WIN_RADIUS, WIN_RADIUS, 0,
                 ColorUtils.applyAlpha(C_CONT_BG, alpha));
 
         String header;
-        if (isThemeCategory()) {
+        if (searchActive()) {
+            header = "Search / " + searchText;
+        } else if (isThemeCategory()) {
             header = THEME_NAME;
         } else {
             List<Module> mods = getModules();
-            String modName = (mods.isEmpty() || selMod >= mods.size()) ? "-" : mods.get(selMod).getName();
+            String modName = (mods.isEmpty() || selMod < 0 || selMod >= mods.size()) ? "-" : mods.get(selMod).getName();
             header = selectedCategory().getName() + " / " + modName;
         }
-        font(9).draw(ctx.getMatrices(), header, cx + 6, cy + 8, ColorUtils.applyAlpha(C_TEXT_SEC, alpha));
-        RenderUtils.drawRoundedRect(ctx.getMatrices(), cx + 4, cy + 20f, cw - 8, 1f, 0,
+        font(11).draw(ctx.getMatrices(), header, cx + 8, cy + 8, ColorUtils.applyAlpha(C_TEXT_SEC, alpha));
+        RenderUtils.drawRoundedRect(ctx.getMatrices(), cx + 4, cy + 22f, cw - 8, 1f, 0,
                 ColorUtils.applyAlpha(C_SEP, alpha));
 
-        if (isThemeCategory()) {
+        if (!searchActive() && isThemeCategory()) {
             renderThemeList(ctx, mx, my, alpha);
         } else {
             renderModuleGrid(ctx, mx, my, alpha);
@@ -224,9 +268,17 @@ public class PivoScreen implements QClient {
 
         List<Module> mods = getModules();
         if (mods.isEmpty()) {
-            font(10).draw(ctx.getMatrices(), "No modules", cx + 6, contentY + 12,
+            font(12).draw(ctx.getMatrices(), "No modules", cx + 8, contentY + 12,
                     ColorUtils.applyAlpha(C_TEXT_DIM, alpha));
             return;
+        }
+
+        for (int i = 0; i < mods.size(); i++) {
+            Module mod = mods.get(i);
+            boolean sel = (i == selMod);
+            AnimationUtils a = modExpandAnim.computeIfAbsent(mod,
+                    k -> new AnimationUtils(sel ? 1f : 0f, 9f, Easings.CUBIC_OUT));
+            a.update(sel ? 1f : 0f);
         }
 
         float colW = (cw - 12f) / 2f;
@@ -252,19 +304,26 @@ public class PivoScreen implements QClient {
         ScissorUtils.pop();
     }
 
+    private float settingsFullHeight(Module mod) {
+        List<Setting> all = mod.getSettings();
+        if (all == null) return 0f;
+        List<Setting> vis = all.stream().filter(s -> s != null && s.visible()).toList();
+        if (vis.isEmpty()) return 16f;
+        float h = 0f;
+        for (Setting s : vis) h += getRowH(s) + 3f;
+        return h;
+    }
+
+    private float expandValue(Module mod) {
+        AnimationUtils a = modExpandAnim.get(mod);
+        return a == null ? 0f : a.getValue();
+    }
+
     private float colHeight(List<Module> mods, int start, int end) {
         float h = 0f;
         for (int i = start; i < end; i++) {
-            h += MOD_ROW_H + MOD_GAP;
-            if (i == selMod) {
-                Module mod = mods.get(i);
-                List<Setting> all = mod.getSettings();
-                if (all != null) {
-                    for (Setting s : all) {
-                        if (s != null && s.visible()) h += getRowH(s) + 3f;
-                    }
-                }
-            }
+            Module mod = mods.get(i);
+            h += MOD_ROW_H + MOD_GAP + settingsFullHeight(mod) * expandValue(mod);
         }
         return h;
     }
@@ -275,6 +334,10 @@ public class PivoScreen implements QClient {
         for (int i = start; i < end; i++) {
             Module mod = mods.get(i);
             boolean sel = (i == selMod);
+            float ev = expandValue(mod);
+            float setH = settingsFullHeight(mod);
+            float clipH = setH * ev;
+
             boolean hov = HoveringUtils.isHovered(mx, my, colX, ry, colW, MOD_ROW_H);
             boolean ena = mod.isEnable();
 
@@ -283,7 +346,7 @@ public class PivoScreen implements QClient {
             ha.update(hov || sel ? 1f : 0f);
             ea.update(ena ? 1f : 0f);
             float hv = ha.getValue();
-            float ev = ea.getValue();
+            float enV = ea.getValue();
 
             if (sel)
                 RenderUtils.drawRoundedRect(ctx.getMatrices(), colX, ry, colW, MOD_ROW_H, 3f,
@@ -292,32 +355,42 @@ public class PivoScreen implements QClient {
                 RenderUtils.drawRoundedRect(ctx.getMatrices(), colX, ry, colW, MOD_ROW_H, 3f,
                         ColorUtils.applyAlpha(C_CHILD, (int)(alpha * hv * 255)));
 
-            if (ev > 0.01f)
+            if (enV > 0.01f)
                 RenderUtils.drawRoundedRect(ctx.getMatrices(), colX, ry + 4, 2f, MOD_ROW_H - 8, 1f,
-                        ColorUtils.applyAlpha(accent(), (int)(alpha * ev * 255)));
+                        ColorUtils.applyAlpha(accent(), (int)(alpha * enV * 255)));
 
             int nameClr = ColorUtils.applyAlpha(ena ? C_TEXT : hov ? C_TEXT_SEC : C_TEXT_DIM, alpha);
-            font(9).draw(ctx.getMatrices(), mod.getName(), colX + 9f, ry + (MOD_ROW_H - 9f) / 2f, nameClr);
+            font(11).draw(ctx.getMatrices(), mod.getName(), colX + 10f, ry + (MOD_ROW_H - 11f) / 2f, nameClr);
 
             ry += MOD_ROW_H + MOD_GAP;
 
-            if (sel) {
-                List<Setting> all = mod.getSettings();
-                if (all != null) {
-                    List<Setting> vis = all.stream().filter(s -> s != null && s.visible()).toList();
-                    if (vis.isEmpty()) {
-                        font(9).draw(ctx.getMatrices(), "No settings", colX + 9f, ry + 2f,
-                                ColorUtils.applyAlpha(C_TEXT_DIM, alpha));
-                        ry += 16f;
-                    } else {
-                        for (Setting s : vis) {
-                            float sh = getRowH(s);
-                            renderRow(ctx, mx, my, colX, ry, colW, s, alpha);
-                            ry += sh + 3f;
-                        }
-                    }
-                }
+            if (ev > 0.01f && setH > 0f) {
+                float setAlpha = alpha * ev;
+                ScissorUtils.push();
+                ScissorUtils.setFromComponentCoordinates(colX, ry, colW, clipH);
+                renderModuleSettings(ctx, mx, my, colX, ry, colW, mod, setAlpha);
+                ScissorUtils.pop();
             }
+
+            ry += clipH;
+        }
+    }
+
+    private void renderModuleSettings(DrawContext ctx, int mx, int my, float colX, float ry, float colW,
+                                      Module mod, float alpha) {
+        List<Setting> all = mod.getSettings();
+        if (all == null) return;
+        List<Setting> vis = all.stream().filter(s -> s != null && s.visible()).toList();
+        if (vis.isEmpty()) {
+            font(11).draw(ctx.getMatrices(), "No settings", colX + 10f, ry + 2f,
+                    ColorUtils.applyAlpha(C_TEXT_DIM, alpha));
+            return;
+        }
+        float sy = ry;
+        for (Setting s : vis) {
+            float sh = getRowH(s);
+            renderRow(ctx, mx, my, colX, sy, colW, s, alpha);
+            sy += sh + 3f;
         }
     }
 
@@ -365,15 +438,17 @@ public class PivoScreen implements QClient {
             } catch (Exception e) {
                 swatchCol = accent();
             }
-            RenderUtils.drawRoundCircle(ctx.getMatrices(), cx + 16f, ry + THEME_ROW_H / 2f, 5f,
+            RenderUtils.drawRoundCircle(ctx.getMatrices(), cx + 18f, ry + THEME_ROW_H / 2f, 11f,
                     ColorUtils.applyAlpha(swatchCol, alpha));
+            RenderUtils.drawRoundCircle(ctx.getMatrices(), cx + 18f, ry + THEME_ROW_H / 2f, 7f,
+                    ColorUtils.applyAlpha(C_WIN_BG, alpha * 0.5f));
 
             String displayName = theme.getTheme().getName();
             int nameClr = ColorUtils.applyAlpha(isCurrent ? C_TEXT : hov ? C_TEXT_SEC : C_TEXT_DIM, alpha);
-            font(10).draw(ctx.getMatrices(), displayName, cx + 28f, ry + (THEME_ROW_H - 10f) / 2f, nameClr);
+            font(13).draw(ctx.getMatrices(), displayName, cx + 34f, ry + (THEME_ROW_H - 13f) / 2f, nameClr);
 
             if (isCurrent)
-                RenderUtils.drawRoundCircle(ctx.getMatrices(), cx + cw - 14f, ry + THEME_ROW_H / 2f, 3f,
+                RenderUtils.drawRoundCircle(ctx.getMatrices(), cx + cw - 16f, ry + THEME_ROW_H / 2f, 6f,
                         ColorUtils.applyAlpha(DOT_GREEN, alpha));
 
             ry += THEME_ROW_H + THEME_GAP;
@@ -384,23 +459,23 @@ public class PivoScreen implements QClient {
 
     private void renderRow(DrawContext ctx, int mx, int my, float rx, float ry, float rw, Setting s, float alpha) {
         float sh = getRowH(s);
-        float lx = rx + 6f, rightX = rx + rw - 6f;
+        float lx = rx + 8f, rightX = rx + rw - 8f;
 
         if (s instanceof BooleanSetting bs) {
             boolean hov = HoveringUtils.isHovered(mx, my, rx, ry, rw, sh);
-            font(10).draw(ctx.getMatrices(), s.name(), lx, ry + (sh - 10f) / 2f,
+            font(12).draw(ctx.getMatrices(), s.name(), lx, ry + (sh - 12f) / 2f,
                     ColorUtils.applyAlpha(bs.isState() ? C_TEXT : hov ? C_TEXT_SEC : C_TEXT_DIM, alpha));
             float tx = rightX - TOGGLE_W;
             float ty = ry + (sh - TOGGLE_H) / 2f;
             renderToggleSwitch(ctx, tx, ty, bs.isState(), s, alpha);
         } else if (s instanceof FloatSetting fs) {
-            font(10).draw(ctx.getMatrices(), s.name(), lx, ry + 4f,
+            font(12).draw(ctx.getMatrices(), s.name(), lx, ry + 5f,
                     ColorUtils.applyAlpha(C_TEXT_SEC, alpha));
             String val = String.format(Locale.ROOT, fs.getIncrement() < 1f ? "%.1f" : "%.0f", fs.get());
-            font(9).draw(ctx.getMatrices(), val, rightX - font(9).getWidth(val), ry + 4f,
+            font(11).draw(ctx.getMatrices(), val, rightX - font(11).getWidth(val), ry + 5f,
                     ColorUtils.applyAlpha(accent(), alpha));
-            float sliderY = ry + sh - 10f;
-            float sliderW = rw - 12f;
+            float sliderY = ry + sh - 11f;
+            float sliderW = rw - 16f;
             float sliderH = 3f;
             float pos = (fs.getMax() == fs.getMin()) ? 0
                     : (fs.get() - fs.getMin()) / (fs.getMax() - fs.getMin());
@@ -409,56 +484,56 @@ public class PivoScreen implements QClient {
             if (pos > 0.001f)
                 RenderUtils.drawRoundedRect(ctx.getMatrices(), lx, sliderY, sliderW * pos, sliderH, sliderH / 2,
                         ColorUtils.applyAlpha(accent(), alpha));
-            RenderUtils.drawRoundCircle(ctx.getMatrices(), lx + sliderW * pos, sliderY + sliderH / 2f, 4.5f,
+            RenderUtils.drawRoundCircle(ctx.getMatrices(), lx + sliderW * pos, sliderY + sliderH / 2f, 5f,
                     ColorUtils.applyAlpha(C_WHITE, alpha));
         } else if (s instanceof ModeSetting ms) {
-            font(10).draw(ctx.getMatrices(), s.name(), lx, ry + 4f,
+            font(12).draw(ctx.getMatrices(), s.name(), lx, ry + 5f,
                     ColorUtils.applyAlpha(C_TEXT_SEC, alpha));
             String cur = ms.getCurrent();
-            font(9).draw(ctx.getMatrices(), cur, rightX - font(9).getWidth(cur), ry + 4f,
+            font(11).draw(ctx.getMatrices(), cur, rightX - font(11).getWidth(cur), ry + 5f,
                     ColorUtils.applyAlpha(accent(), alpha));
-            float oy = ry + 18f;
+            float oy = ry + 20f;
             for (String mode : ms.getMods()) {
                 boolean sel = mode.equals(ms.getCurrent());
                 boolean hov = HoveringUtils.isHovered(mx, my, rx, oy, rw, MODE_ROW_H);
-                float cX = lx + 3f, cY = oy + 7f;
-                RenderUtils.drawRoundCircle(ctx.getMatrices(), cX, cY, 6f,
+                float cX = lx + 4f, cY = oy + 8f;
+                RenderUtils.drawRoundCircle(ctx.getMatrices(), cX, cY, 7f,
                         ColorUtils.applyAlpha(sel ? accent() : C_SEP, alpha));
                 if (sel)
-                    RenderUtils.drawRoundCircle(ctx.getMatrices(), cX, cY, 3f, ColorUtils.applyAlpha(C_WHITE, alpha));
+                    RenderUtils.drawRoundCircle(ctx.getMatrices(), cX, cY, 4f, ColorUtils.applyAlpha(C_WHITE, alpha));
                 int clr = ColorUtils.applyAlpha(sel ? accent() : hov ? C_TEXT_SEC : C_TEXT_DIM, alpha);
-                font(10).draw(ctx.getMatrices(), mode, lx + 12f, oy + 2f, clr);
+                font(12).draw(ctx.getMatrices(), mode, lx + 14f, oy + 2f, clr);
                 oy += MODE_ROW_H;
             }
         } else if (s instanceof BindSetting bind) {
-            font(10).draw(ctx.getMatrices(), s.name(), lx, ry + (sh - 10f) / 2f,
+            font(12).draw(ctx.getMatrices(), s.name(), lx, ry + (sh - 12f) / 2f,
                     ColorUtils.applyAlpha(C_TEXT_DIM, alpha));
             String bStr = (bindingSetting == bind || bind.getKey() == -1) ? "..." : KeyBoardUtils.getBindName(bind.getKey());
-            float bw = font(9).getWidth(bStr) + 8f;
+            float bw = font(11).getWidth(bStr) + 10f;
             float bx = rightX - bw;
             RenderUtils.drawRoundedRect(ctx.getMatrices(), bx, ry + 4f, bw, sh - 8f, 2f,
                     ColorUtils.applyAlpha(C_WHITE, alpha));
-            font(9).draw(ctx.getMatrices(), bStr, bx + 4f, ry + (sh - 9f) / 2f, ColorUtils.applyAlpha(C_BLACK, alpha));
+            font(11).draw(ctx.getMatrices(), bStr, bx + 5f, ry + (sh - 11f) / 2f, ColorUtils.applyAlpha(C_BLACK, alpha));
         } else if (s instanceof TextSetting ts) {
-            font(10).draw(ctx.getMatrices(), s.name(), lx, ry + (sh - 10f) / 2f,
+            font(12).draw(ctx.getMatrices(), s.name(), lx, ry + (sh - 12f) / 2f,
                     ColorUtils.applyAlpha(C_TEXT_DIM, alpha));
             boolean editing = editingText == ts;
             String tv = ts.get() == null || ts.get().isEmpty() ? "" : ts.get();
             String boxText = editing ? tv + "_" : (tv.isEmpty() ? "..." : tv);
-            float bw = font(9).getWidth(boxText) + 8f;
+            float bw = font(11).getWidth(boxText) + 10f;
             float bx = rightX - bw;
             RenderUtils.drawRoundedRect(ctx.getMatrices(), bx, ry + 4f, bw, sh - 8f, 2f,
                     ColorUtils.applyAlpha(editing ? C_WHITE : C_CHILD, alpha));
-            font(9).draw(ctx.getMatrices(), boxText, bx + 4f, ry + (sh - 9f) / 2f,
+            font(11).draw(ctx.getMatrices(), boxText, bx + 5f, ry + (sh - 11f) / 2f,
                     ColorUtils.applyAlpha(editing ? C_BLACK : C_TEXT_SEC, alpha));
         } else if (s instanceof ListSetting ls) {
-            font(10).draw(ctx.getMatrices(), s.name(), lx, ry + 4f,
+            font(12).draw(ctx.getMatrices(), s.name(), lx, ry + 5f,
                     ColorUtils.applyAlpha(C_TEXT_SEC, alpha));
-            float oy = ry + 18f;
+            float oy = ry + 20f;
             for (BooleanSetting entry : ls.getSettings()) {
                 if (!entry.visible()) { oy += LIST_ROW_H; continue; }
                 boolean hov = HoveringUtils.isHovered(mx, my, rx, oy, rw, LIST_ROW_H);
-                font(10).draw(ctx.getMatrices(), entry.name(), lx + 12f, oy + 4f,
+                font(12).draw(ctx.getMatrices(), entry.name(), lx + 14f, oy + 4f,
                         ColorUtils.applyAlpha(entry.isState() ? C_TEXT : hov ? C_TEXT_SEC : C_TEXT_DIM, alpha));
                 float tx = rightX - TOGGLE_W;
                 float ty = oy + (LIST_ROW_H - TOGGLE_H) / 2f;
@@ -474,12 +549,7 @@ public class PivoScreen implements QClient {
         anim.update(on ? 1f : 0f);
         float t = anim.getValue();
 
-        if (t < 0.98f) {
-            RenderUtils.drawBlur(ctx.getMatrices(), tx, ty, TOGGLE_W, TOGGLE_H, TOGGLE_H / 2f, 6f,
-                    ColorUtils.applyAlpha(C_BLACK, (int)(alpha * (1f - t) * 200)));
-        }
-
-        int offCol = ColorUtils.applyAlpha(ColorUtils.rgba(15, 15, 18, 240), alpha);
+        int offCol = ColorUtils.applyAlpha(C_TOGGLE_OFF, alpha);
         int onCol = ColorUtils.applyAlpha(accent(), alpha);
         int bgColor = ColorUtils.interpolateColor(offCol, onCol, t);
 
@@ -527,28 +597,38 @@ public class PivoScreen implements QClient {
     }
 
     private float getRowH(Setting s) {
-        if (s instanceof FloatSetting) return 30f;
-        if (s instanceof BooleanSetting) return 22f;
-        if (s instanceof ModeSetting ms) return 20f + ms.getMods().size() * 15f;
+        if (s instanceof FloatSetting) return 32f;
+        if (s instanceof BooleanSetting) return 24f;
+        if (s instanceof ModeSetting ms) return 22f + ms.getMods().size() * MODE_ROW_H;
         if (s instanceof ListSetting ls) {
             int vis = 0;
             for (BooleanSetting e : ls.getSettings()) if (e.visible()) vis++;
-            return 20f + vis * 18f;
+            return 22f + vis * LIST_ROW_H;
         }
-        return 22f;
+        return 24f;
     }
 
     public boolean mouseClicked(double mx, double my, int button) {
         if (mc == null) return false;
         editingText = null;
+        searching = false;
 
         float sx = winX, sy = winY;
+        float sBoxX = sx + SEARCH_MARGIN;
+        float sBoxY = sy + WIN_H - SEARCH_H - SEARCH_MARGIN;
+        float sBoxW = SIDE_W - SEARCH_MARGIN * 2;
+        if (button == 0 && HoveringUtils.isHovered(mx, my, sBoxX, sBoxY, sBoxW, SEARCH_H)) {
+            searching = true;
+            return true;
+        }
+
         float ry = sy + ICON_H + 4f;
         int count = CATS.length + 1;
         for (int i = 0; i < count; i++) {
             if (HoveringUtils.isHovered(mx, my, sx + 3, ry, SIDE_W - 6, CAT_ROW_H) && button == 0) {
                 selCat = i; selMod = 0;
                 contScrollTarget = 0;
+                searchText = "";
                 return true;
             }
             ry += CAT_ROW_H + CAT_GAP;
@@ -560,7 +640,7 @@ public class PivoScreen implements QClient {
             return true;
         }
 
-        if (isThemeCategory()) {
+        if (!searchActive() && isThemeCategory()) {
             return handleThemeClick(mx, my, button);
         }
 
@@ -624,34 +704,39 @@ public class PivoScreen implements QClient {
         float ry = startY;
         for (int i = start; i < end; i++) {
             Module mod = mods.get(i);
+            float ev = expandValue(mod);
+            float setH = settingsFullHeight(mod);
+            float clipH = setH * ev;
+
             if (HoveringUtils.isHovered(mx, my, colX, ry, colW, MOD_ROW_H)) {
                 if (button == 0) { mod.toggle(); return true; }
-                if (button == 1) { selMod = i; return true; }
+                if (button == 1) { selMod = (selMod == i) ? -1 : i; return true; }
                 if (button == 2) { bindingModule = mod; return true; }
             }
             ry += MOD_ROW_H + MOD_GAP;
-            if (i == selMod) {
+
+            if (ev > 0.5f && setH > 0f) {
                 List<Setting> all = mod.getSettings();
                 if (all != null) {
                     List<Setting> vis = all.stream().filter(s -> s != null && s.visible()).toList();
-                    if (vis.isEmpty()) {
-                        ry += 16f;
-                    } else {
+                    if (!vis.isEmpty()) {
+                        float sy = ry;
                         for (Setting s : vis) {
                             float sh = getRowH(s);
-                            if (handleClick(mx, my, button, colX, ry, colW, s)) return true;
-                            ry += sh + 3f;
+                            if (handleClick(mx, my, button, colX, sy, colW, s)) return true;
+                            sy += sh + 3f;
                         }
                     }
                 }
             }
+            ry += clipH;
         }
         return false;
     }
 
     private boolean handleClick(double mx, double my, int button, float rx, float ry, float rw, Setting s) {
         float sh = getRowH(s);
-        float lx = rx + 6f, rightX = rx + rw - 6f;
+        float lx = rx + 8f, rightX = rx + rw - 8f;
         if (s instanceof BooleanSetting bs && button == 0) {
             float tx = rightX - TOGGLE_W;
             float ty = ry + (sh - TOGGLE_H) / 2f;
@@ -663,8 +748,8 @@ public class PivoScreen implements QClient {
             }
         }
         if (s instanceof FloatSetting fs && button == 0) {
-            float sliderY = ry + sh - 10f;
-            float sliderW = rw - 12f;
+            float sliderY = ry + sh - 11f;
+            float sliderW = rw - 16f;
             if (HoveringUtils.isHovered(mx, my, lx, sliderY - 2, sliderW, 8)) {
                 float pos = (float) Math.max(0, Math.min(1, (mx - lx) / sliderW));
                 float val = fs.getMin() + (fs.getMax() - fs.getMin()) * pos;
@@ -680,7 +765,7 @@ public class PivoScreen implements QClient {
             editingText = (TextSetting) s; return true;
         }
         if (s instanceof ModeSetting ms && button == 0) {
-            float oy = ry + 18f;
+            float oy = ry + 20f;
             for (String mode : ms.getMods()) {
                 if (HoveringUtils.isHovered(mx, my, rx, oy, rw, MODE_ROW_H)) {
                     ms.set(mode); return true;
@@ -689,7 +774,7 @@ public class PivoScreen implements QClient {
             }
         }
         if (s instanceof ListSetting ls && button == 0) {
-            float oy = ry + 18f;
+            float oy = ry + 20f;
             for (BooleanSetting entry : ls.getSettings()) {
                 if (!entry.visible()) { oy += LIST_ROW_H; continue; }
                 float tx = rightX - TOGGLE_W;
@@ -722,6 +807,14 @@ public class PivoScreen implements QClient {
     }
 
     public boolean keyPressed(int keyCode, int modifiers) {
+        if (searching) {
+            if (keyCode == 256) { searching = false; }
+            else if (keyCode == 259) {
+                if (!searchText.isEmpty()) searchText = searchText.substring(0, searchText.length() - 1);
+            }
+            else if (keyCode == 261) { searchText = ""; }
+            return true;
+        }
         if (editingText != null) {
             if (keyCode == 256 || keyCode == 257) { editingText = null; }
             else if (keyCode == 259) {
@@ -747,6 +840,10 @@ public class PivoScreen implements QClient {
     }
 
     public boolean charTyped(char chr) {
+        if (searching) {
+            if (searchText.length() < SEARCH_MAX_LEN) searchText += chr;
+            return true;
+        }
         if (editingText != null) {
             String t = editingText.get();
             if (t == null) t = "";
@@ -765,6 +862,6 @@ public class PivoScreen implements QClient {
         return ColorUtils.getThemeColor();
     }
 
-    private Font font(int size) { return Fonts.getFont("suisse", size); }
+    private Font font(int size) { return Fonts.getFont("sf_regular", size); }
     private Font iconFont(int size) { return Fonts.getFont("icon", size); }
 }

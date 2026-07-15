@@ -325,15 +325,22 @@ public class EntityESP extends Module {
             font.drawString(matrices, segment.text(), drawX, y + 4, segment.color());
             drawX += font.getStringWidth(segment.text());
         }
-        font.drawString(matrices, nameText, drawX, y + 4, TAG_TEXT_COLOR);
-        drawX += font.getStringWidth(nameText);
-        font.drawString(matrices, leftBracket, drawX, y + 4, TAG_TEXT_COLOR);
-        drawX += font.getStringWidth(leftBracket);
-        font.drawString(matrices, hpText, drawX, y + 4, TAG_HEALTH_COLOR);
-        drawX += font.getStringWidth(hpText);
-        font.drawString(matrices, rightBracket, drawX, y + 4, TAG_TEXT_COLOR);
-        drawX += font.getStringWidth(rightBracket);
-        if (isFriend) font.drawString(matrices, friendSuffix, drawX, y + 4, TAG_FRIEND_COLOR);
+
+        float nameCenterX = x + totalWidth / 2f;
+        font.drawCenteredString(matrices, nameText, nameCenterX, y + 4, TAG_TEXT_COLOR);
+
+        float rightWidth = font.getStringWidth(leftBracket)
+                + font.getStringWidth(hpText)
+                + font.getStringWidth(rightBracket)
+                + font.getStringWidth(friendSuffix);
+        float rightX = x + totalWidth - 1.0f - rightWidth;
+        font.drawString(matrices, leftBracket, rightX, y + 4, TAG_TEXT_COLOR);
+        rightX += font.getStringWidth(leftBracket);
+        font.drawString(matrices, hpText, rightX, y + 4, TAG_HEALTH_COLOR);
+        rightX += font.getStringWidth(hpText);
+        font.drawString(matrices, rightBracket, rightX, y + 4, TAG_TEXT_COLOR);
+        rightX += font.getStringWidth(rightBracket);
+        if (isFriend) font.drawString(matrices, friendSuffix, rightX, y + 4, TAG_FRIEND_COLOR);
     }
 
     private void drawArmor(EventRender.Default event, PlayerEntity player, ScreenRect rect, boolean tagsEnabled) {
